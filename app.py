@@ -282,6 +282,11 @@ def tracking():
     """Canlı takip - PUBLIC (giriş gerektirmez)"""
     return render_template('tracking.html')
 
+@app.route('/filo-izleme')
+def filo_izleme():
+    """Filo İzleme - Gerçek zamanlı simülasyon"""
+    return render_template('filo_izleme.html')
+
 @app.route('/profile')
 @login_required
 def profile():

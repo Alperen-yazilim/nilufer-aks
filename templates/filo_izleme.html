@@ -1,0 +1,925 @@
+{% extends "base.html" %}
+
+{% block title %}Filo İzleme - NilüferAKS{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <h4 class="text-light">
+            <i class="bi bi-broadcast me-2"></i>Filo İzleme
+            <small class="text-muted fs-6 ms-2">Gerçek zamanlı araç takibi</small>
+        </h4>
+    </div>
+</div>
+
+<!-- Kontrol Paneli -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <!-- Sol: Oynatma Kontrolleri -->
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-success btn-sm" id="btn-play">
+                            <i class="bi bi-play-fill"></i> Başlat
+                        </button>
+                        <button class="btn btn-warning btn-sm" id="btn-pause" disabled>
+                            <i class="bi bi-pause-fill"></i> Duraklat
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btn-reset">
+                            <i class="bi bi-arrow-counterclockwise"></i> Sıfırla
+                        </button>
+                        <div class="vr mx-2"></div>
+                        <label class="text-muted small me-1">Hız:</label>
+                        <select class="form-select form-select-sm" id="speed-select" style="width: 80px;">
+                            <option value="1">1x</option>
+                            <option value="2">2x</option>
+                            <option value="5" selected>5x</option>
+                            <option value="10">10x</option>
+                            <option value="20">20x</option>
+                            <option value="30">30x</option>
+                            <option value="50">50x</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Orta: Görünüm Seçici + AI Butonu -->
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="view-mode" id="view-mevcut" value="mevcut" checked>
+                            <label class="btn btn-outline-danger btn-sm" for="view-mevcut">
+                                <i class="bi bi-signpost-2 me-1"></i>Mevcut
+                            </label>
+                            <input type="radio" class="btn-check" name="view-mode" id="view-ai" value="ai" disabled>
+                            <label class="btn btn-outline-success btn-sm" for="view-ai">
+                                <i class="bi bi-robot me-1"></i>AI Optimize
+                            </label>
+                            <input type="radio" class="btn-check" name="view-mode" id="view-karsilastir" value="karsilastir" disabled>
+                            <label class="btn btn-outline-info btn-sm" for="view-karsilastir">
+                                <i class="bi bi-arrows-angle-contract me-1"></i>Karşılaştır
+                            </label>
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="btn-ai-optimize">
+                            <i class="bi bi-magic me-1"></i>AI ile Optimize Et
+                        </button>
+                    </div>
+                    
+                    <!-- Sağ: Zaman + Tarih -->
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="text-muted small">07:00</span>
+                        <div class="progress" style="width: 200px; height: 8px;">
+                            <div class="progress-bar bg-success" id="time-progress" style="width: 0%"></div>
+                        </div>
+                        <span class="text-muted small">14:00</span>
+                        <span class="badge bg-info fs-6" id="current-time">07:00:00</span>
+                        <select class="form-select form-select-sm" id="tarih-select" style="width: 120px;">
+                            <option value="19.12.2025">19.12.2025</option>
+                            <option value="20.12.2025">20.12.2025</option>
+                            <option value="21.12.2025">21.12.2025</option>
+                            <option value="22.12.2025">22.12.2025</option>
+                            <option value="23.12.2025">23.12.2025</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Sol: Harita -->
+    <div class="col-lg-9">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-geo-alt me-2"></i>Canlı Harita</span>
+                <div class="d-flex gap-3" id="legend">
+                    <span class="legend-item"><span class="legend-dot" style="background:#dc3545;"></span>Araç 2824</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#007bff;"></span>Araç 1520</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#28a745;"></span>Araç 3615</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#fd7e14;"></span>Araç 4527</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#6f42c1;"></span>Araç 6574</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="map" style="height: 600px; border-radius: 0 0 12px 12px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sağ: Araç Listesi -->
+    <div class="col-lg-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-truck me-2"></i>Aktif Araçlar
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="arac-listesi">
+                    <!-- Araç 2824 -->
+                    <div class="list-group-item bg-transparent border-secondary">
+                        <div class="d-flex align-items-center">
+                            <span class="legend-dot me-2" style="background:#dc3545; width:12px; height:12px;"></span>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">Araç 2824</div>
+                                <small class="text-muted">Large Garbage Truck</small>
+                            </div>
+                            <span class="badge bg-success" id="status-2824">Bekliyor</span>
+                        </div>
+                        <div class="mt-2 small">
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Durak:</span>
+                                <span id="durak-2824">0 / 170</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Mesafe:</span>
+                                <span id="mesafe-2824">0 km</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Araç 1520 -->
+                    <div class="list-group-item bg-transparent border-secondary">
+                        <div class="d-flex align-items-center">
+                            <span class="legend-dot me-2" style="background:#007bff; width:12px; height:12px;"></span>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">Araç 1520</div>
+                                <small class="text-muted">Large Garbage Truck</small>
+                            </div>
+                            <span class="badge bg-success" id="status-1520">Bekliyor</span>
+                        </div>
+                        <div class="mt-2 small">
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Durak:</span>
+                                <span id="durak-1520">0 / 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Mesafe:</span>
+                                <span id="mesafe-1520">0 km</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Araç 3615 -->
+                    <div class="list-group-item bg-transparent border-secondary">
+                        <div class="d-flex align-items-center">
+                            <span class="legend-dot me-2" style="background:#28a745; width:12px; height:12px;"></span>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">Araç 3615</div>
+                                <small class="text-muted">Crane Vehicle</small>
+                            </div>
+                            <span class="badge bg-success" id="status-3615">Bekliyor</span>
+                        </div>
+                        <div class="mt-2 small">
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Durak:</span>
+                                <span id="durak-3615">0 / 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Mesafe:</span>
+                                <span id="mesafe-3615">0 km</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Araç 4527 -->
+                    <div class="list-group-item bg-transparent border-secondary">
+                        <div class="d-flex align-items-center">
+                            <span class="legend-dot me-2" style="background:#fd7e14; width:12px; height:12px;"></span>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">Araç 4527</div>
+                                <small class="text-muted">Large Garbage Truck</small>
+                            </div>
+                            <span class="badge bg-success" id="status-4527">Bekliyor</span>
+                        </div>
+                        <div class="mt-2 small">
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Durak:</span>
+                                <span id="durak-4527">0 / 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Mesafe:</span>
+                                <span id="mesafe-4527">0 km</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Araç 6574 -->
+                    <div class="list-group-item bg-transparent border-secondary">
+                        <div class="d-flex align-items-center">
+                            <span class="legend-dot me-2" style="background:#6f42c1; width:12px; height:12px;"></span>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">Araç 6574</div>
+                                <small class="text-muted">Small Garbage Truck</small>
+                            </div>
+                            <span class="badge bg-success" id="status-6574">Bekliyor</span>
+                        </div>
+                        <div class="mt-2 small">
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Durak:</span>
+                                <span id="durak-6574">0 / 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted">
+                                <span>Mesafe:</span>
+                                <span id="mesafe-6574">0 km</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Özet İstatistikler -->
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="row text-center">
+                    <div class="col">
+                        <div class="text-info fs-4 fw-bold" id="stat-toplam-durak">0</div>
+                        <small class="text-muted">Toplam Durak</small>
+                    </div>
+                    <div class="col">
+                        <div class="text-warning fs-4 fw-bold" id="stat-toplam-mesafe">0 km</div>
+                        <small class="text-muted">Toplam Mesafe</small>
+                    </div>
+                    <div class="col">
+                        <div class="text-success fs-4 fw-bold" id="stat-aktif-arac">0 / 5</div>
+                        <small class="text-muted">Aktif Araç</small>
+                    </div>
+                    <div class="col">
+                        <div class="text-danger fs-4 fw-bold" id="stat-gecen-sure">00:00:00</div>
+                        <small class="text-muted">Geçen Süre</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Karşılaştırma Paneli (Başta gizli) -->
+<div class="row mt-3" id="ai-comparison-panel" style="display: none;">
+    <div class="col-12">
+        <div class="card border-success">
+            <div class="card-header bg-success bg-opacity-25 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-robot me-2"></i>AI Optimizasyon Sonuçları</span>
+                <span class="badge bg-success fs-6">%20 Tasarruf</span>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <!-- Mesafe Karşılaştırma -->
+                    <div class="col-md-3">
+                        <div class="comparison-box">
+                            <div class="comparison-label">Toplam Mesafe</div>
+                            <div class="d-flex justify-content-center align-items-center gap-3">
+                                <div>
+                                    <div class="text-danger fs-5 fw-bold" id="cmp-mesafe-mevcut">185 km</div>
+                                    <small class="text-muted">Mevcut</small>
+                                </div>
+                                <i class="bi bi-arrow-right text-success fs-4"></i>
+                                <div>
+                                    <div class="text-success fs-5 fw-bold" id="cmp-mesafe-ai">148 km</div>
+                                    <small class="text-muted">AI</small>
+                                </div>
+                            </div>
+                            <div class="text-success mt-2 fw-bold">
+                                <i class="bi bi-graph-down-arrow"></i> -37 km
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Yakıt Karşılaştırma -->
+                    <div class="col-md-3">
+                        <div class="comparison-box">
+                            <div class="comparison-label">Yakıt Tüketimi</div>
+                            <div class="d-flex justify-content-center align-items-center gap-3">
+                                <div>
+                                    <div class="text-danger fs-5 fw-bold" id="cmp-yakit-mevcut">55 L</div>
+                                    <small class="text-muted">Mevcut</small>
+                                </div>
+                                <i class="bi bi-arrow-right text-success fs-4"></i>
+                                <div>
+                                    <div class="text-success fs-5 fw-bold" id="cmp-yakit-ai">44 L</div>
+                                    <small class="text-muted">AI</small>
+                                </div>
+                            </div>
+                            <div class="text-success mt-2 fw-bold">
+                                <i class="bi bi-fuel-pump"></i> -11 L
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- CO2 Karşılaştırma -->
+                    <div class="col-md-3">
+                        <div class="comparison-box">
+                            <div class="comparison-label">CO2 Emisyonu</div>
+                            <div class="d-flex justify-content-center align-items-center gap-3">
+                                <div>
+                                    <div class="text-danger fs-5 fw-bold" id="cmp-co2-mevcut">146 kg</div>
+                                    <small class="text-muted">Mevcut</small>
+                                </div>
+                                <i class="bi bi-arrow-right text-success fs-4"></i>
+                                <div>
+                                    <div class="text-success fs-5 fw-bold" id="cmp-co2-ai">117 kg</div>
+                                    <small class="text-muted">AI</small>
+                                </div>
+                            </div>
+                            <div class="text-success mt-2 fw-bold">
+                                <i class="bi bi-tree"></i> -29 kg
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Maliyet Karşılaştırma -->
+                    <div class="col-md-3">
+                        <div class="comparison-box">
+                            <div class="comparison-label">Günlük Maliyet</div>
+                            <div class="d-flex justify-content-center align-items-center gap-3">
+                                <div>
+                                    <div class="text-danger fs-5 fw-bold" id="cmp-maliyet-mevcut">₺1,430</div>
+                                    <small class="text-muted">Mevcut</small>
+                                </div>
+                                <i class="bi bi-arrow-right text-success fs-4"></i>
+                                <div>
+                                    <div class="text-success fs-5 fw-bold" id="cmp-maliyet-ai">₺1,144</div>
+                                    <small class="text-muted">AI</small>
+                                </div>
+                            </div>
+                            <div class="text-success mt-2 fw-bold">
+                                <i class="bi bi-cash-stack"></i> -₺286
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Yıllık Projeksiyon -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-success mb-0 text-center">
+                            <i class="bi bi-graph-up-arrow me-2"></i>
+                            <strong>Yıllık Projeksiyon:</strong> 
+                            AI optimizasyonu ile <strong>₺104,390</strong> tasarruf | 
+                            <strong>10,585 kg</strong> daha az CO2 emisyonu | 
+                            <strong>13,505 km</strong> daha az mesafe
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .comparison-box {
+        background: rgba(0,0,0,0.2);
+        border-radius: 12px;
+        padding: 15px;
+    }
+    .comparison-label {
+        font-size: 0.85rem;
+        color: #adb5bd;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+    }
+    #ai-comparison-panel {
+        animation: slideIn 0.5s ease-out;
+    }
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .ai-route {
+        stroke-dasharray: 10, 5;
+        animation: dash 1s linear infinite;
+    }
+    @keyframes dash {
+        to {
+            stroke-dashoffset: -15;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Harita başlat
+    const map = L.map('map').setView([40.22, 28.94], 12);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+    
+    // Araç renkleri
+    const aracRenkleri = {
+        2824: '#dc3545',
+        1520: '#007bff',
+        3615: '#28a745',
+        4527: '#fd7e14',
+        6574: '#6f42c1'
+    };
+    
+    // Araç verileri
+    let aracVerileri = {};
+    let aracMarkers = {};
+    let aracPolylines = {};
+    let aracPaths = {};
+    
+    // Simülasyon değişkenleri
+    let isPlaying = false;
+    let currentTime = new Date('2025-12-19T07:00:00');
+    const startTime = new Date('2025-12-19T07:00:00');
+    const endTime = new Date('2025-12-19T14:00:00');
+    let animationInterval = null;
+    let speed = 5;
+    
+    // Nilüfer sınırını yükle
+    async function loadNiluferSinir() {
+        try {
+            const response = await fetch('/api/nilufer/sinir');
+            const data = await response.json();
+            
+            L.polygon(data.polygon, {
+                color: '#1a1a1a',
+                weight: 2,
+                fillColor: '#333333',
+                fillOpacity: 0.08,
+                dashArray: '5,5'
+            }).addTo(map);
+        } catch (error) {
+            console.error('Nilüfer sınırı yüklenemedi:', error);
+        }
+    }
+    
+    // Araç verilerini yükle
+    async function loadAracVerileri(tarih) {
+        const araclar = [2824, 1520, 3615, 4527, 6574];
+        
+        for (const aracId of araclar) {
+            try {
+                const response = await fetch(`/api/arac/${aracId}/rota?tarih=${tarih}`);
+                const data = await response.json();
+                
+                if (!data.hata) {
+                    // Saate göre sırala ve zaman bilgisi ekle
+                    aracVerileri[aracId] = data.duraklar.map(d => ({
+                        ...d,
+                        time: parseTime(d.saat)
+                    })).filter(d => d.time >= startTime && d.time <= endTime);
+                    
+                    // Toplam durak güncelle
+                    document.getElementById(`durak-${aracId}`).textContent = 
+                        `0 / ${aracVerileri[aracId].length}`;
+                }
+            } catch (error) {
+                console.error(`Araç ${aracId} verisi yüklenemedi:`, error);
+            }
+        }
+        
+        initMarkers();
+    }
+    
+    // Saat string'ini Date objesine çevir
+    function parseTime(saatStr) {
+        const [saat, dakika, saniye] = saatStr.split(':').map(Number);
+        const date = new Date('2025-12-19');
+        date.setHours(saat, dakika, saniye);
+        return date;
+    }
+    
+    // Marker'ları başlat
+    function initMarkers() {
+        Object.keys(aracRenkleri).forEach(aracId => {
+            const renk = aracRenkleri[aracId];
+            
+            // Araç marker'ı (kamyon ikonu)
+            const truckIcon = L.divIcon({
+                className: 'truck-marker',
+                html: `<div style="
+                    background: ${renk};
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                "><i class="bi bi-truck" style="color: white; font-size: 12px;"></i></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            
+            // İlk konum
+            const ilkDurak = aracVerileri[aracId]?.[0];
+            if (ilkDurak) {
+                aracMarkers[aracId] = L.marker([ilkDurak.lat, ilkDurak.lon], {
+                    icon: truckIcon
+                }).addTo(map).bindPopup(`Araç ${aracId}`);
+                
+                // Rota çizgisi
+                aracPolylines[aracId] = L.polyline([], {
+                    color: renk,
+                    weight: 3,
+                    opacity: 0.8
+                }).addTo(map);
+                
+                aracPaths[aracId] = [[ilkDurak.lat, ilkDurak.lon]];
+            }
+        });
+    }
+    
+    // Simülasyonu güncelle
+    function updateSimulation() {
+        const totalDuration = endTime - startTime;
+        const elapsed = currentTime - startTime;
+        const progress = (elapsed / totalDuration) * 100;
+        
+        // Progress bar güncelle
+        document.getElementById('time-progress').style.width = `${progress}%`;
+        document.getElementById('current-time').textContent = formatTime(currentTime);
+        document.getElementById('stat-gecen-sure').textContent = formatDuration(elapsed);
+        
+        let toplamDurak = 0;
+        let toplamMesafe = 0;
+        let aktifArac = 0;
+        
+        // Her araç için güncelle
+        Object.keys(aracRenkleri).forEach(aracId => {
+            const duraklar = aracVerileri[aracId] || [];
+            
+            // Bu zamana kadar olan durakları bul
+            const gecmisDuraklar = duraklar.filter(d => d.time <= currentTime);
+            
+            if (gecmisDuraklar.length > 0) {
+                const sonDurak = gecmisDuraklar[gecmisDuraklar.length - 1];
+                
+                // Marker pozisyonunu güncelle
+                if (aracMarkers[aracId]) {
+                    aracMarkers[aracId].setLatLng([sonDurak.lat, sonDurak.lon]);
+                }
+                
+                // Rota çizgisini güncelle
+                const rotaKoordinatlari = gecmisDuraklar.map(d => [d.lat, d.lon]);
+                if (aracPolylines[aracId]) {
+                    aracPolylines[aracId].setLatLngs(rotaKoordinatlari);
+                }
+                
+                // İstatistikleri güncelle
+                document.getElementById(`durak-${aracId}`).textContent = 
+                    `${gecmisDuraklar.length} / ${duraklar.length}`;
+                
+                // Mesafe hesapla
+                let mesafe = 0;
+                for (let i = 1; i < gecmisDuraklar.length; i++) {
+                    mesafe += haversine(
+                        gecmisDuraklar[i-1].lat, gecmisDuraklar[i-1].lon,
+                        gecmisDuraklar[i].lat, gecmisDuraklar[i].lon
+                    );
+                }
+                document.getElementById(`mesafe-${aracId}`).textContent = `${mesafe.toFixed(1)} km`;
+                
+                // Status güncelle
+                const statusEl = document.getElementById(`status-${aracId}`);
+                if (gecmisDuraklar.length < duraklar.length) {
+                    statusEl.textContent = 'Aktif';
+                    statusEl.className = 'badge bg-warning';
+                    aktifArac++;
+                } else {
+                    statusEl.textContent = 'Tamamlandı';
+                    statusEl.className = 'badge bg-success';
+                }
+                
+                toplamDurak += gecmisDuraklar.length;
+                toplamMesafe += mesafe;
+            }
+        });
+        
+        // Genel istatistikleri güncelle
+        document.getElementById('stat-toplam-durak').textContent = toplamDurak;
+        document.getElementById('stat-toplam-mesafe').textContent = `${toplamMesafe.toFixed(1)} km`;
+        document.getElementById('stat-aktif-arac').textContent = `${aktifArac} / 5`;
+        
+        // Zaman ilerlet
+        currentTime = new Date(currentTime.getTime() + (1000 * speed)); // Her tick'te 1 saniye * hız
+        
+        // Bitiş kontrolü
+        if (currentTime >= endTime) {
+            pauseSimulation();
+            document.getElementById('btn-play').disabled = true;
+        }
+    }
+    
+    // Haversine mesafe hesaplama
+    function haversine(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+    
+    // Zaman formatlama
+    function formatTime(date) {
+        return date.toTimeString().split(' ')[0];
+    }
+    
+    function formatDuration(ms) {
+        const hours = Math.floor(ms / 3600000);
+        const minutes = Math.floor((ms % 3600000) / 60000);
+        const seconds = Math.floor((ms % 60000) / 1000);
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+    
+    // Oynatma kontrolleri
+    function startSimulation() {
+        if (isPlaying) return;
+        isPlaying = true;
+        
+        document.getElementById('btn-play').disabled = true;
+        document.getElementById('btn-pause').disabled = false;
+        
+        animationInterval = setInterval(updateSimulation, 100); // 100ms interval
+    }
+    
+    function pauseSimulation() {
+        isPlaying = false;
+        
+        document.getElementById('btn-play').disabled = false;
+        document.getElementById('btn-pause').disabled = true;
+        
+        if (animationInterval) {
+            clearInterval(animationInterval);
+            animationInterval = null;
+        }
+    }
+    
+    function resetSimulation() {
+        pauseSimulation();
+        
+        currentTime = new Date(startTime);
+        document.getElementById('time-progress').style.width = '0%';
+        document.getElementById('current-time').textContent = '07:00:00';
+        document.getElementById('btn-play').disabled = false;
+        
+        // Marker'ları sıfırla
+        Object.keys(aracRenkleri).forEach(aracId => {
+            const ilkDurak = aracVerileri[aracId]?.[0];
+            if (ilkDurak && aracMarkers[aracId]) {
+                aracMarkers[aracId].setLatLng([ilkDurak.lat, ilkDurak.lon]);
+            }
+            if (aracPolylines[aracId]) {
+                aracPolylines[aracId].setLatLngs([]);
+            }
+            
+            // Status sıfırla
+            const statusEl = document.getElementById(`status-${aracId}`);
+            statusEl.textContent = 'Bekliyor';
+            statusEl.className = 'badge bg-success';
+            
+            document.getElementById(`durak-${aracId}`).textContent = 
+                `0 / ${aracVerileri[aracId]?.length || 0}`;
+            document.getElementById(`mesafe-${aracId}`).textContent = '0 km';
+        });
+        
+        // Genel istatistikleri sıfırla
+        document.getElementById('stat-toplam-durak').textContent = '0';
+        document.getElementById('stat-toplam-mesafe').textContent = '0 km';
+        document.getElementById('stat-aktif-arac').textContent = '0 / 5';
+        document.getElementById('stat-gecen-sure').textContent = '00:00:00';
+    }
+    
+    // Event listeners
+    document.getElementById('btn-play').addEventListener('click', startSimulation);
+    document.getElementById('btn-pause').addEventListener('click', pauseSimulation);
+    document.getElementById('btn-reset').addEventListener('click', resetSimulation);
+    
+    document.getElementById('speed-select').addEventListener('change', function() {
+        speed = parseInt(this.value);
+    });
+    
+    document.getElementById('tarih-select').addEventListener('change', function() {
+        resetSimulation();
+        hideAIResults();
+        loadAracVerileri(this.value);
+    });
+    
+    // ==========================================================
+    // AI OPTİMİZASYON FONKSİYONLARI
+    // ==========================================================
+    
+    let aiOptimized = false;
+    let aiRotaVerileri = {};
+    let aiPolylines = {};
+    let currentViewMode = 'mevcut';
+    
+    // AI Optimize butonu
+    document.getElementById('btn-ai-optimize').addEventListener('click', async function() {
+        if (aiOptimized) {
+            // Zaten optimize edilmişse sadece paneli göster
+            showAIResults();
+            return;
+        }
+        
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Hesaplanıyor...';
+        
+        // Simüle edilmiş gecikme (ML modeli çalışıyormuş gibi)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Mock AI rotaları oluştur (gerçek rotaların optimize edilmiş versiyonu)
+        generateMockAIRoutes();
+        
+        // Karşılaştırma değerlerini hesapla
+        calculateComparison();
+        
+        // Paneli göster
+        showAIResults();
+        
+        // Radio butonları aktifleştir
+        document.getElementById('view-ai').disabled = false;
+        document.getElementById('view-karsilastir').disabled = false;
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Optimize Edildi';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        
+        aiOptimized = true;
+    });
+    
+    // Mock AI rotaları oluştur
+    function generateMockAIRoutes() {
+        // AI rotaları = Mevcut rotaların optimize edilmiş hali
+        // Gerçekte ML modeli burada çalışacak
+        Object.keys(aracVerileri).forEach(aracId => {
+            const mevcutDuraklar = aracVerileri[aracId] || [];
+            
+            // Mock: Bazı gereksiz durakları çıkar, rotayı kısalt
+            // Gerçek optimizasyonda TSP/VRP algoritması kullanılacak
+            const optimizeDuraklar = mevcutDuraklar.filter((d, i) => {
+                // Her 5. duraktan 1'ini atla (simüle optimizasyon)
+                return i % 5 !== 0 || i === 0;
+            });
+            
+            aiRotaVerileri[aracId] = optimizeDuraklar;
+        });
+    }
+    
+    // Karşılaştırma değerlerini hesapla
+    function calculateComparison() {
+        let toplamMevcutMesafe = 0;
+        let toplamAIMesafe = 0;
+        
+        Object.keys(aracVerileri).forEach(aracId => {
+            const mevcutDuraklar = aracVerileri[aracId] || [];
+            const aiDuraklar = aiRotaVerileri[aracId] || [];
+            
+            // Mevcut mesafe
+            for (let i = 1; i < mevcutDuraklar.length; i++) {
+                toplamMevcutMesafe += haversine(
+                    mevcutDuraklar[i-1].lat, mevcutDuraklar[i-1].lon,
+                    mevcutDuraklar[i].lat, mevcutDuraklar[i].lon
+                );
+            }
+            
+            // AI mesafe
+            for (let i = 1; i < aiDuraklar.length; i++) {
+                toplamAIMesafe += haversine(
+                    aiDuraklar[i-1].lat, aiDuraklar[i-1].lon,
+                    aiDuraklar[i].lat, aiDuraklar[i].lon
+                );
+            }
+        });
+        
+        // Değerleri güncelle
+        const mesafeFarki = toplamMevcutMesafe - toplamAIMesafe;
+        const yakitMevcut = toplamMevcutMesafe * 0.3; // 0.3 L/km
+        const yakitAI = toplamAIMesafe * 0.3;
+        const co2Mevcut = yakitMevcut * 2.65; // kg CO2 per L dizel
+        const co2AI = yakitAI * 2.65;
+        const maliyetMevcut = yakitMevcut * 26; // ₺26/L
+        const maliyetAI = yakitAI * 26;
+        
+        // UI güncelle
+        document.getElementById('cmp-mesafe-mevcut').textContent = `${toplamMevcutMesafe.toFixed(0)} km`;
+        document.getElementById('cmp-mesafe-ai').textContent = `${toplamAIMesafe.toFixed(0)} km`;
+        
+        document.getElementById('cmp-yakit-mevcut').textContent = `${yakitMevcut.toFixed(0)} L`;
+        document.getElementById('cmp-yakit-ai').textContent = `${yakitAI.toFixed(0)} L`;
+        
+        document.getElementById('cmp-co2-mevcut').textContent = `${co2Mevcut.toFixed(0)} kg`;
+        document.getElementById('cmp-co2-ai').textContent = `${co2AI.toFixed(0)} kg`;
+        
+        document.getElementById('cmp-maliyet-mevcut').textContent = `₺${maliyetMevcut.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+        document.getElementById('cmp-maliyet-ai').textContent = `₺${maliyetAI.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    }
+    
+    // AI sonuçlarını göster
+    function showAIResults() {
+        document.getElementById('ai-comparison-panel').style.display = 'block';
+        document.getElementById('ai-comparison-panel').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // AI sonuçlarını gizle
+    function hideAIResults() {
+        document.getElementById('ai-comparison-panel').style.display = 'none';
+        aiOptimized = false;
+        
+        // Butonu sıfırla
+        const btn = document.getElementById('btn-ai-optimize');
+        btn.innerHTML = '<i class="bi bi-magic me-1"></i>AI ile Optimize Et';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+        
+        // Radio butonları devre dışı bırak
+        document.getElementById('view-ai').disabled = true;
+        document.getElementById('view-karsilastir').disabled = true;
+        document.getElementById('view-mevcut').checked = true;
+        
+        // AI rotalarını temizle
+        Object.keys(aiPolylines).forEach(aracId => {
+            if (aiPolylines[aracId]) {
+                aiPolylines[aracId].remove();
+            }
+        });
+        aiPolylines = {};
+    }
+    
+    // Görünüm değişikliği
+    document.querySelectorAll('input[name="view-mode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            currentViewMode = this.value;
+            updateViewMode();
+        });
+    });
+    
+    function updateViewMode() {
+        // Mevcut rotaları göster/gizle
+        Object.keys(aracPolylines).forEach(aracId => {
+            if (aracPolylines[aracId]) {
+                if (currentViewMode === 'ai') {
+                    aracPolylines[aracId].setStyle({ opacity: 0.2 });
+                } else {
+                    aracPolylines[aracId].setStyle({ opacity: 0.8 });
+                }
+            }
+        });
+        
+        // AI rotalarını göster/gizle
+        if (currentViewMode === 'ai' || currentViewMode === 'karsilastir') {
+            drawAIRoutes();
+        } else {
+            // AI rotalarını gizle
+            Object.keys(aiPolylines).forEach(aracId => {
+                if (aiPolylines[aracId]) {
+                    aiPolylines[aracId].remove();
+                }
+            });
+            aiPolylines = {};
+        }
+    }
+    
+    // AI rotalarını çiz
+    function drawAIRoutes() {
+        // AI renkleri (yeşil tonları)
+        const aiRenkleri = {
+            2824: '#20c997',
+            1520: '#198754',
+            3615: '#0d6efd',
+            4527: '#0dcaf0',
+            6574: '#6610f2'
+        };
+        
+        Object.keys(aiRotaVerileri).forEach(aracId => {
+            const duraklar = aiRotaVerileri[aracId] || [];
+            
+            if (duraklar.length > 0 && !aiPolylines[aracId]) {
+                const coords = duraklar.map(d => [d.lat, d.lon]);
+                
+                aiPolylines[aracId] = L.polyline(coords, {
+                    color: aiRenkleri[aracId],
+                    weight: 4,
+                    opacity: 0.9,
+                    dashArray: '10, 5',
+                    className: 'ai-route'
+                }).addTo(map);
+            }
+        });
+    }
+    
+    // Sayfa yüklendiğinde
+    loadNiluferSinir();
+    loadAracVerileri('19.12.2025');
+</script>
+{% endblock %}

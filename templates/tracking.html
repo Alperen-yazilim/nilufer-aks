@@ -136,16 +136,16 @@
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-4">
-                        <h3 class="text-success mb-0" id="aktif-arac">43</h3>
-                        <small class="text-muted">Aktif</small>
+                        <h3 class="text-success mb-0" id="aktif-arac">-</h3>
+                        <small class="text-muted">Toplam Araç</small>
                     </div>
                     <div class="col-4">
-                        <h3 class="text-warning mb-0" id="bekleyen-arac">2</h3>
-                        <small class="text-muted">Beklemede</small>
+                        <h3 class="text-warning mb-0" id="toplam-mahalle">-</h3>
+                        <small class="text-muted">Mahalle</small>
                     </div>
                     <div class="col-4">
-                        <h3 class="text-danger mb-0" id="depo-arac">1</h3>
-                        <small class="text-muted">Depoda</small>
+                        <h3 class="text-info mb-0" id="toplam-konteyner">-</h3>
+                        <small class="text-muted">Konteyner</small>
                     </div>
                 </div>
             </div>
@@ -159,32 +159,14 @@
             <div class="card-body">
                 <select class="form-select mb-3" id="mahalle-select">
                     <option value="">Mahalle Ara...</option>
-                    <option value="gorukle">Görükle</option>
-                    <option value="ihsaniye">İhsaniye</option>
-                    <option value="konak">Konak</option>
-                    <option value="besevler">Beşevler</option>
-                    <option value="dumlupinar">Dumlupınar</option>
+                    <!-- API'den doldurulacak -->
                 </select>
                 
-                <div id="mahalle-durum" class="d-none">
-                    <div class="list-group list-group-flush">
-                        <div class="list-group-item d-flex justify-content-between">
-                            <span>Görükle</span>
-                            <span class="badge bg-success">09:42 ✓</span>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between">
-                            <span>İhsaniye</span>
-                            <span class="badge bg-success">10:15 ✓</span>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between">
-                            <span>Konak</span>
-                            <span class="badge bg-primary">Şimdi</span>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between">
-                            <span>Beşevler</span>
-                            <span class="badge bg-secondary">~14:00</span>
-                        </div>
-                    </div>
+                <div id="mahalle-durum">
+                    <p class="text-muted small text-center">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Mahalle seçin
+                    </p>
                 </div>
             </div>
         </div>
@@ -192,40 +174,32 @@
         <!-- Günlük İstatistik -->
         <div class="card mb-4">
             <div class="card-header">
-                <i class="bi bi-bar-chart me-2"></i>Günlük İstatistik
+                <i class="bi bi-bar-chart me-2"></i>Genel Bilgi
             </div>
             <div class="card-body">
                 <div class="mb-3 d-flex justify-content-between">
-                    <span>Toplanan</span>
-                    <span id="stat-toplanan">487 ton</span>
+                    <span>Günlük Ort. Tonaj</span>
+                    <span id="stat-toplanan">-</span>
                 </div>
                 <div class="mb-3 d-flex justify-content-between">
-                    <span>Ziyaret</span>
-                    <span id="stat-ziyaret">52/64 mahalle</span>
+                    <span>Toplam Mahalle</span>
+                    <span id="stat-ziyaret">-</span>
                 </div>
                 <div class="mb-3 d-flex justify-content-between">
-                    <span>Kalan süre</span>
-                    <span id="stat-kalan">~3 saat</span>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Günlük İlerleme</span>
-                    <span id="ilerleme-yuzde">81%</span>
-                </div>
-                <div class="progress">
-                    <div class="progress-bar" id="ilerleme-bar" style="width: 81%"></div>
+                    <span>Toplam Konteyner</span>
+                    <span id="stat-kalan">-</span>
                 </div>
             </div>
         </div>
         
-        <!-- Bildirim -->
+        <!-- Bilgi -->
         <div class="card bg-primary bg-opacity-10 border-primary">
             <div class="card-body">
                 <div class="d-flex align-items-center">
-                    <i class="bi bi-lightbulb text-warning me-3" style="font-size: 1.5rem;"></i>
+                    <i class="bi bi-info-circle text-info me-3" style="font-size: 1.5rem;"></i>
                     <div>
-                        <strong>Mahallenize çöp toplama aracı</strong><br>
-                        <span class="text-primary">yaklaşık 14:00'te gelecek.</span>
+                        <strong>Nilüfer AKS</strong><br>
+                        <span class="text-muted">Akıllı Atık Kontrol Sistemi</span>
                     </div>
                 </div>
             </div>
@@ -278,16 +252,29 @@
         <!-- Compact Stats -->
         <div class="mobile-stats-compact mb-3">
             <div class="stat-box">
-                <h4 class="text-success" id="mobile-aktif">43</h4>
-                <small class="text-muted">Aktif</small>
+                <h4 class="text-success" id="mobile-aktif">-</h4>
+                <small class="text-muted">Araç</small>
             </div>
             <div class="stat-box">
-                <h4 class="text-warning" id="mobile-bekleyen">2</h4>
-                <small class="text-muted">Beklemede</small>
+                <h4 class="text-warning" id="mobile-bekleyen">-</h4>
+                <small class="text-muted">Mahalle</small>
             </div>
             <div class="stat-box">
-                <h4 class="text-info" id="mobile-tamamlanan">81%</h4>
-                <small class="text-muted">Tamamlandı</small>
+                <h4 class="text-info" id="mobile-tamamlanan">-</h4>
+                <small class="text-muted">Konteyner</small>
+            </div>
+        </div>
+        
+        <!-- Bilgi Kutusu -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Nilüfer AKS
+            </div>
+            <div class="card-body p-3">
+                <div class="text-center py-3">
+                    <i class="bi bi-database text-muted" style="font-size: 2rem;"></i>
+                    <p class="text-muted mb-0 mt-2">Gerçek zamanlı takip verisi bekleniyor...</p>
+                </div>
             </div>
         </div>
         
@@ -298,25 +285,11 @@
             </div>
             <div class="card-body p-2">
                 <div class="list-group list-group-flush">
-                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
-                        <span><i class="bi bi-check-circle text-success me-2"></i>Görükle</span>
-                        <span class="badge bg-success">09:42</span>
+                    <div class="list-group-item bg-transparent text-center py-3">
+                        <small class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Veri yükleniyor...</small>
                     </div>
-                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
-                        <span><i class="bi bi-check-circle text-success me-2"></i>İhsaniye</span>
-                        <span class="badge bg-success">10:15</span>
-                    </div>
-                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
-                        <span><i class="bi bi-arrow-right-circle text-primary me-2"></i>Konak</span>
-                        <span class="badge bg-primary">Şimdi</span>
-                    </div>
-                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
-                        <span><i class="bi bi-clock text-secondary me-2"></i>Beşevler</span>
-                        <span class="badge bg-secondary">~14:00</span>
-                    </div>
-                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
-                        <span><i class="bi bi-clock text-secondary me-2"></i>Dumlupınar</span>
-                        <span class="badge bg-secondary">~15:30</span>
+                    <div class="list-group-item bg-transparent text-center py-3">
+                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Mahalle verisi API'den yüklenecek</small>
                     </div>
                 </div>
             </div>
@@ -325,23 +298,23 @@
         <!-- Günlük İlerleme -->
         <div class="card">
             <div class="card-header">
-                <i class="bi bi-graph-up me-2"></i>Günlük İlerleme
+                <i class="bi bi-graph-up me-2"></i>Sistem Durumu
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
-                    <span>Toplanan Atık</span>
-                    <strong class="text-success">487 ton</strong>
+                    <span>Toplam Araç</span>
+                    <strong class="text-success" id="ilerleme-arac">-</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
-                    <span>Ziyaret Edilen</span>
-                    <strong class="text-info">52/64 mahalle</strong>
+                    <span>Toplam Mahalle</span>
+                    <strong class="text-info" id="ilerleme-mahalle">-</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-3">
-                    <span>Kalan Süre</span>
-                    <strong class="text-warning">~3 saat</strong>
+                    <span>Konteyner Sayısı</span>
+                    <strong class="text-warning" id="ilerleme-konteyner">-</strong>
                 </div>
-                <div class="progress" style="height: 12px;">
-                    <div class="progress-bar bg-success" style="width: 81%"></div>
+                <div class="text-center">
+                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Gerçek zamanlı veri bağlantısı hazırlanıyor</small>
                 </div>
             </div>
         </div>
@@ -351,43 +324,136 @@
 
 {% block extra_js %}
 <script>
-    const map = L.map('map').setView([40.21, 28.90], 12);
+    const map = L.map('map').setView([40.22, 28.89], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     
-    // Depo
-    L.marker([40.2063, 28.9023], {
-        icon: L.divIcon({
-            html: '<i class="bi bi-house-fill text-warning" style="font-size: 24px;"></i>',
-            iconSize: [30, 30], iconAnchor: [15, 15]
-        })
-    }).addTo(map).bindPopup('<b>DEPO</b>');
+    // Harita bilgi kutusu
+    const infoBox = L.control({position: 'topright'});
+    infoBox.onAdd = function() {
+        const div = L.DomUtil.create('div', 'map-info-box');
+        div.innerHTML = '<div style="background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; color: white;"><i class="bi bi-geo-alt me-1"></i>Yükleniyor...</div>';
+        return div;
+    };
+    infoBox.addTo(map);
     
-    // Araçlar
-    const araclar = [
-        {id: 2824, lat: 40.2250, lon: 28.8800, durum: 'hareket', mahalle: 'Dumlupınar'},
-        {id: 1409, lat: 40.2150, lon: 28.9100, durum: 'toplama', mahalle: 'Fethiye'},
-        {id: 7823, lat: 40.2609, lon: 28.9377, durum: 'hareket', mahalle: 'Balat'},
-        {id: 3156, lat: 40.2063, lon: 28.9023, durum: 'depo', mahalle: 'Depo'},
-    ];
+    // Nilüfer ilçe sınırını yükle
+    async function loadNiluferSinir() {
+        try {
+            const response = await fetch('/api/nilufer/sinir');
+            const data = await response.json();
+            
+            // Nilüfer sınırı - çok açık siyah, %10 opacity
+            L.polygon(data.polygon, {
+                color: '#1a1a1a',
+                weight: 2,
+                fillColor: '#333333',
+                fillOpacity: 0.08,
+                dashArray: '5,5'
+            }).addTo(map);
+            
+            // Info box güncelle
+            document.querySelector('.map-info-box').innerHTML = `
+                <div style="background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; color: white;">
+                    <i class="bi bi-geo-alt me-1"></i><strong>Nilüfer İlçesi</strong>
+                </div>
+            `;
+            
+        } catch (error) {
+            console.error('Nilüfer sınırı yüklenemedi:', error);
+        }
+    }
     
-    const aracMarkers = {};
+    // Dropdown'ı doldur (GERÇEK VERİ)
+    async function loadMahallelerDropdown() {
+        try {
+            const response = await fetch('/api/mahalleler/liste');
+            const data = await response.json();
+            
+            const select = document.getElementById('mahalle-select');
+            if (select) {
+                select.innerHTML = '<option value="">Mahalle seçin...</option>';
+                
+                data.mahalleler.forEach(m => {
+                    const option = document.createElement('option');
+                    option.value = m.id;
+                    option.textContent = m.ad;
+                    option.dataset.lat = m.lat;
+                    option.dataset.lon = m.lon;
+                    select.appendChild(option);
+                });
+            }
+            
+        } catch (error) {
+            console.error('Mahalle listesi yüklenemedi:', error);
+        }
+    }
     
-    araclar.forEach(arac => {
-        const color = arac.durum === 'hareket' ? '#28a745' : arac.durum === 'toplama' ? '#ffc107' : '#dc3545';
-        const marker = L.marker([arac.lat, arac.lon], {
-            icon: L.divIcon({
-                html: `<i class="bi bi-truck-front-fill" style="font-size: 20px; color: ${color};"></i>`,
-                iconSize: [24, 24], iconAnchor: [12, 12]
-            })
-        }).addTo(map).bindPopup(`<b>Araç ${arac.id}</b><br>${arac.mahalle}`);
-        aracMarkers[arac.id] = {marker, data: arac};
-    });
+    // API'den verileri yükle
+    async function loadTrackingData() {
+        try {
+            const response = await fetch('/api/dashboard');
+            const data = await response.json();
+            
+            // İstatistikleri güncelle
+            document.getElementById('aktif-arac').textContent = data.toplam_arac || '-';
+            document.getElementById('toplam-mahalle').textContent = data.toplam_mahalle || '-';
+            document.getElementById('toplam-konteyner').textContent = data.toplam_konteyner ? data.toplam_konteyner.toLocaleString('tr-TR') : '-';
+            
+            document.getElementById('stat-toplanan').textContent = data.gunluk_tonaj ? data.gunluk_tonaj + ' ton' : '-';
+            document.getElementById('stat-ziyaret').textContent = data.toplam_mahalle || '-';
+            document.getElementById('stat-kalan').textContent = data.toplam_konteyner ? data.toplam_konteyner.toLocaleString('tr-TR') : '-';
+            
+            // Mobil istatistikler
+            const mobileAktif = document.getElementById('mobile-aktif');
+            const mobileBekleyen = document.getElementById('mobile-bekleyen');
+            const mobileTamamlanan = document.getElementById('mobile-tamamlanan');
+            
+            if (mobileAktif) mobileAktif.textContent = data.toplam_arac || '-';
+            if (mobileBekleyen) mobileBekleyen.textContent = data.toplam_mahalle || '-';
+            if (mobileTamamlanan) mobileTamamlanan.textContent = data.toplam_konteyner ? (data.toplam_konteyner / 1000).toFixed(1) + 'K' : '-';
+            
+            // Sidebar ilerleme istatistikleri
+            const ilerArac = document.getElementById('ilerleme-arac');
+            const ilerMahalle = document.getElementById('ilerleme-mahalle');
+            const ilerKonteyner = document.getElementById('ilerleme-konteyner');
+            
+            if (ilerArac) ilerArac.textContent = data.toplam_arac || '-';
+            if (ilerMahalle) ilerMahalle.textContent = data.toplam_mahalle || '-';
+            if (ilerKonteyner) ilerKonteyner.textContent = data.toplam_konteyner ? data.toplam_konteyner.toLocaleString('tr-TR') : '-';
+            
+        } catch (error) {
+            console.error('Veri yüklenemedi:', error);
+        }
+    }
+    
+    // Başlat
+    loadTrackingData();
+    loadNiluferSinir();
+    loadMahallelerDropdown();
     
     // Desktop: Mahalle seçimi
     const mahalleSelect = document.getElementById('mahalle-select');
     if (mahalleSelect) {
         mahalleSelect.addEventListener('change', function() {
-            document.getElementById('mahalle-durum').classList.toggle('d-none', !this.value);
+            const selectedOption = this.options[this.selectedIndex];
+            const mahalleAd = selectedOption.textContent;
+            
+            if (this.value) {
+                document.getElementById('mahalle-durum').innerHTML = `
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between bg-transparent">
+                            <span><i class="bi bi-geo-alt me-1"></i>Seçilen</span>
+                            <strong class="text-primary">${mahalleAd}</strong>
+                        </div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('mahalle-durum').innerHTML = `
+                    <p class="text-muted small text-center">
+                        <i class="bi bi-info-circle me-1"></i>Mahalle seçin
+                    </p>
+                `;
+            }
         });
     }
     
@@ -423,49 +489,23 @@
         });
     }
     
-    // Mobile: Search
+    // Mobile: Search (basitleştirildi)
     const mobileSearch = document.getElementById('mobile-mahalle-search');
     const mobileResult = document.getElementById('mobile-search-result');
     const mobileResultText = document.getElementById('mobile-result-text');
     
     if (mobileSearch) {
-        const mahalleler = {
-            'görükle': {lat: 40.2250, lon: 28.8800, durum: '09:42 tamamlandı'},
-            'ihsaniye': {lat: 40.2150, lon: 28.9100, durum: '10:15 tamamlandı'},
-            'konak': {lat: 40.2100, lon: 28.8900, durum: 'Şu an toplanıyor'},
-            'beşevler': {lat: 40.1950, lon: 28.8950, durum: '~14:00 gelecek'},
-            'dumlupınar': {lat: 40.1850, lon: 28.9150, durum: '~15:30 gelecek'}
-        };
-        
         mobileSearch.addEventListener('input', function(e) {
             const query = e.target.value.toLowerCase();
             
-            if (query.length > 2) {
-                const found = Object.keys(mahalleler).find(m => m.includes(query));
-                if (found) {
-                    const info = mahalleler[found];
-                    mobileResultText.textContent = `${found.charAt(0).toUpperCase() + found.slice(1)} - ${info.durum}`;
-                    mobileResult.classList.remove('d-none');
-                    map.setView([info.lat, info.lon], 14);
-                } else {
-                    mobileResult.classList.add('d-none');
-                }
+            if (query.length > 1) {
+                mobileResultText.textContent = `Aranıyor: ${query}`;
+                mobileResult.classList.remove('d-none');
             } else {
                 mobileResult.classList.add('d-none');
             }
         });
     }
-    
-    // Simüle hareket
-    setInterval(() => {
-        Object.values(aracMarkers).forEach(({marker, data}) => {
-            if (data.durum === 'hareket') {
-                data.lat += (Math.random() - 0.5) * 0.001;
-                data.lon += (Math.random() - 0.5) * 0.001;
-                marker.setLatLng([data.lat, data.lon]);
-            }
-        });
-    }, 3000);
     
     // Resize harita mobilde
     function resizeMap() {

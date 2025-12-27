@@ -149,15 +149,41 @@
         }
         
         .kpi-value {
-            font-size: 2.5rem;
+            font-size: 1.6rem;
             font-weight: bold;
             color: var(--nilüfer-primary);
         }
         
         .kpi-label {
             color: #adb5bd;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
+        }
+        
+        .kpi-card .card-body {
+            padding: 0.75rem !important;
+        }
+        
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 12px;
+            font-size: 0.75rem;
+            color: #adb5bd;
+        }
+        
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        
+        .legend-line {
+            width: 16px;
+            height: 3px;
+            margin-right: 4px;
+            border-radius: 2px;
         }
         
         .status-aktif {
@@ -173,7 +199,7 @@
         }
         
         #map {
-            height: 400px;
+            height: 550px;
             border-radius: 12px;
         }
         
@@ -240,6 +266,11 @@
                             <li class="nav-item">
                                 <a class="nav-link {% if request.path == '/tracking' %}active{% endif %}" href="/tracking">
                                     <i class="bi bi-geo-alt me-1"></i>Canlı Takip
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/filo-izleme' %}active{% endif %}" href="/filo-izleme">
+                                    <i class="bi bi-broadcast me-1"></i>Filo İzleme
                                 </a>
                             </li>
                         {% elif session.user.role == 'surucu' %}

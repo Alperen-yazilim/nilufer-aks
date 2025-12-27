@@ -12,13 +12,13 @@
                 <div class="d-flex align-items-center mb-3">
                     <i class="bi bi-truck text-primary" style="font-size: 2rem;"></i>
                     <div class="ms-3">
-                        <h5 class="mb-0">Araç 2824</h5>
-                        <small class="text-muted">Mehmet Yılmaz</small>
+                        <h5 class="mb-0" id="arac-bilgi">Araç Yükleniyor...</h5>
+                        <small class="text-muted" id="sofor-adi">{{ session.get('ad', 'Şoför') }}</small>
                     </div>
                 </div>
                 <div class="d-flex justify-content-between text-muted">
                     <span><i class="bi bi-calendar3 me-1"></i><span id="driver-date"></span></span>
-                    <span class="badge bg-info">Vinçli</span>
+                    <span class="badge bg-secondary" id="arac-tipi">-</span>
                 </div>
             </div>
         </div>
@@ -43,18 +43,18 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
                     <span>Tamamlanan</span>
-                    <span id="progress-percent">66%</span>
+                    <span id="progress-percent">-</span>
                 </div>
                 <div class="progress mb-3">
-                    <div class="progress-bar" id="progress-bar" style="width: 66%"></div>
+                    <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
                 </div>
                 <div class="row text-center">
                     <div class="col">
-                        <h6 class="mb-0" id="kalan-durak">3</h6>
+                        <h6 class="mb-0" id="kalan-durak">-</h6>
                         <small class="text-muted">Kalan</small>
                     </div>
                     <div class="col">
-                        <h6 class="mb-0" id="tahmini-bitis">14:30</h6>
+                        <h6 class="mb-0" id="tahmini-bitis">-</h6>
                         <small class="text-muted">Tahmini</small>
                     </div>
                 </div>
@@ -69,17 +69,20 @@
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-4">
-                        <h5 class="text-info mb-0" id="ozet-ton">4.2</h5>
+                        <h5 class="text-info mb-0" id="ozet-ton">-</h5>
                         <small class="text-muted">ton</small>
                     </div>
                     <div class="col-4">
-                        <h5 class="text-success mb-0" id="ozet-km">34</h5>
+                        <h5 class="text-success mb-0" id="ozet-km">-</h5>
                         <small class="text-muted">km</small>
                     </div>
                     <div class="col-4">
-                        <h5 class="text-warning mb-0" id="ozet-kapasite">78%</h5>
+                        <h5 class="text-warning mb-0" id="ozet-kapasite">-</h5>
                         <small class="text-muted">kapasite</small>
                     </div>
+                </div>
+                <div class="text-center mt-3">
+                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Veriler API'den yüklenecek</small>
                 </div>
             </div>
         </div>
@@ -108,20 +111,26 @@
     document.getElementById('driver-date').textContent = 
         new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
     
-    // Örnek rota verisi
-    const rotaVerisi = {
-        duraklar: [
-            {sira: 1, mahalle: 'Görükle', talep: 24.5, durum: 'tamamlandi', saat: '08:15', lat: 40.2230, lon: 28.8720},
-            {sira: 2, mahalle: 'İhsaniye', talep: 18.2, durum: 'tamamlandi', saat: '09:42', lat: 40.2180, lon: 28.8650},
-            {sira: 3, mahalle: 'Dumlupınar', talep: 22.1, durum: 'devam', saat: null, lat: 40.2250, lon: 28.8800},
-            {sira: 4, mahalle: 'Konak', talep: 15.8, durum: 'bekliyor', saat: '~11:30', lat: 40.2100, lon: 28.8800},
-            {sira: 5, mahalle: 'Beşevler', talep: 12.4, durum: 'bekliyor', saat: '~12:45', lat: 40.2050, lon: 28.8900},
-        ]
+    // Rota verisi (API'den gelecek)
+    let rotaVerisi = {
+        duraklar: []
     };
     
     // Rota listesini oluştur
     function renderRouteList() {
         const listEl = document.getElementById('route-list');
+        
+        if (rotaVerisi.duraklar.length === 0) {
+            listEl.innerHTML = `
+                <div class="list-group-item text-center py-4">
+                    <i class="bi bi-hourglass-split text-muted" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-2 mb-0">Rota verisi bekleniyor...</p>
+                    <small class="text-muted">API bağlantısı ile yüklenecek</small>
+                </div>
+            `;
+            return;
+        }
+        
         listEl.innerHTML = '';
         
         rotaVerisi.duraklar.forEach(durak => {
@@ -162,7 +171,7 @@
     }
     
     // Harita başlat
-    const map = L.map('map').setView([40.21, 28.88], 13);
+    const map = L.map('map').setView([40.22, 28.89], 12);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
@@ -177,53 +186,16 @@
             iconSize: [20, 20],
             iconAnchor: [10, 10]
         })
-    }).addTo(map).bindPopup('<b>DEPO</b>');
+    }).addTo(map).bindPopup('<b>DEPO</b><br>Nilüfer Belediyesi');
     
-    // Rota noktaları ve çizgisi
-    const rotaKoordinatlari = [depoCoord];
-    
-    rotaVerisi.duraklar.forEach(durak => {
-        const coord = [durak.lat, durak.lon];
-        rotaKoordinatlari.push(coord);
-        
-        let color;
-        switch(durak.durum) {
-            case 'tamamlandi': color = '#28a745'; break;
-            case 'devam': color = '#007bff'; break;
-            default: color = '#6c757d';
-        }
-        
-        L.circleMarker(coord, {
-            radius: 10,
-            fillColor: color,
-            color: '#fff',
-            weight: 2,
-            fillOpacity: 0.9
-        }).addTo(map).bindPopup(`<b>${durak.sira}. ${durak.mahalle}</b><br>${durak.talep} ton`);
-        
-        // Numara etiketi
-        L.marker(coord, {
-            icon: L.divIcon({
-                className: 'custom-div-icon',
-                html: `<span style="color: white; font-weight: bold; font-size: 12px;">${durak.sira}</span>`,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
-            })
-        }).addTo(map);
-    });
-    
-    rotaKoordinatlari.push(depoCoord); // Depoya dönüş
-    
-    // Rota çizgisi
-    L.polyline(rotaKoordinatlari, {
-        color: '#00d4aa',
-        weight: 3,
-        opacity: 0.7,
-        dashArray: '10, 10'
-    }).addTo(map);
-    
-    // Fit bounds
-    map.fitBounds(L.latLngBounds(rotaKoordinatlari));
+    // Harita bilgi kutusu
+    const infoBox = L.control({position: 'topright'});
+    infoBox.onAdd = function() {
+        const div = L.DomUtil.create('div');
+        div.innerHTML = '<div style="background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; color: white;"><i class="bi bi-signpost me-1"></i>Rota API bağlantısı bekleniyor</div>';
+        return div;
+    };
+    infoBox.addTo(map);
     
     // Navigasyon butonu
     document.getElementById('btn-navigate').addEventListener('click', () => {
@@ -232,6 +204,8 @@
         if (aktifDurak) {
             const url = `https://www.google.com/maps/dir/?api=1&destination=${aktifDurak.lat},${aktifDurak.lon}`;
             window.open(url, '_blank');
+        } else {
+            alert('Aktif bir durak bulunamadı. Rota verisi API\'den yüklendiğinde navigasyon kullanılabilir.');
         }
     });
     

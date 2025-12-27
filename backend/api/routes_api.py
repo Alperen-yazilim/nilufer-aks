@@ -2,9 +2,163 @@
 Routes API Endpoints
 Rota optimizasyonu ve takip API'leri
 """
-from flask import jsonify
+from flask import jsonify, request
 from datetime import datetime
 from . import routes_bp
+import pandas as pd
+import os
+import glob
+
+
+def get_arac_listesi():
+    """Mevcut araç dosyalarını listele"""
+    dosyalar = glob.glob('araclarin_durdugu_noktalar/arac_*_duragan.csv')
+    araclar = []
+    for dosya in dosyalar:
+        # Dosya adından araç ID'sini çıkar
+        dosya_adi = os.path.basename(dosya)
+        arac_id = int(dosya_adi.split('_')[1])
+        araclar.append(arac_id)
+    return sorted(araclar)
+
+
+def get_arac_gercek_rota(arac_id, tarih=None):
+    """
+    Araç durağan noktalarından gerçek rotayı çıkar
+    
+    Args:
+        arac_id: Araç numarası
+        tarih: Tarih (örn: '19.12.2025'). None ise ilk tarih
+    
+    Returns:
+        dict: Rota bilgileri
+    """
+    dosya = f'araclarin_durdugu_noktalar/arac_{arac_id}_duragan.csv'
+    
+    if not os.path.exists(dosya):
+        return None
+    
+    df = pd.read_csv(dosya)
+    
+    # Mevcut tarihleri al
+    tarihler = df['Tarih'].unique().tolist()
+    
+    if tarih is None:
+        tarih = tarihler[0]
+    elif tarih not in tarihler:
+        return {'hata': f'Tarih bulunamadı. Mevcut tarihler: {tarihler}'}
+    
+    # O güne ait verileri filtrele
+    gun_df = df[df['Tarih'] == tarih].copy()
+    
+    if gun_df.empty:
+        return None
+    
+    # Saate göre sırala
+    gun_df['saat_dt'] = pd.to_datetime(gun_df['Saat'], format='%H:%M:%S')
+    gun_df = gun_df.sort_values('saat_dt')
+    
+    # Araç tipi ve konteyner bilgisi
+    arac_tipi = gun_df['vehicle_type'].iloc[0] if 'vehicle_type' in gun_df.columns else 'Bilinmiyor'
+    konteyner_tipi = gun_df['konteyner_tip'].iloc[0] if 'konteyner_tip' in gun_df.columns else 'Bilinmiyor'
+    
+    # Benzersiz durak noktalarını çıkar (yakın koordinatları birleştir)
+    # Koordinat toleransı: ~10 metre
+    tolerans = 0.0001
+    
+    duraklar = []
+    onceki_lat, onceki_lon = None, None
+    
+    for _, row in gun_df.iterrows():
+        lat, lon = row['Enlem'], row['Boylam']
+        saat = row['Saat']
+        
+        # İlk nokta veya yeterince uzak mı?
+        if onceki_lat is None or (abs(lat - onceki_lat) > tolerans or abs(lon - onceki_lon) > tolerans):
+            duraklar.append({
+                'sira': len(duraklar) + 1,
+                'lat': round(lat, 6),
+                'lon': round(lon, 6),
+                'saat': saat
+            })
+            onceki_lat, onceki_lon = lat, lon
+    
+    # Toplam mesafeyi hesapla (haversine)
+    toplam_mesafe = 0
+    for i in range(1, len(duraklar)):
+        lat1, lon1 = duraklar[i-1]['lat'], duraklar[i-1]['lon']
+        lat2, lon2 = duraklar[i]['lat'], duraklar[i]['lon']
+        
+        from math import radians, cos, sin, sqrt, atan2
+        R = 6371  # km
+        
+        lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        
+        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1-a))
+        mesafe = R * c
+        toplam_mesafe += mesafe
+    
+    return {
+        'arac_id': arac_id,
+        'tarih': tarih,
+        'arac_tipi': arac_tipi,
+        'konteyner_tipi': konteyner_tipi,
+        'duraklar': duraklar,
+        'durak_sayisi': len(duraklar),
+        'toplam_mesafe_km': round(toplam_mesafe, 2),
+        'mevcut_tarihler': tarihler
+    }
+
+
+@routes_bp.route('/araclar')
+def api_arac_listesi():
+    """Durağan nokta verisi olan araçları listele"""
+    araclar = get_arac_listesi()
+    return jsonify({
+        'araclar': araclar,
+        'toplam': len(araclar)
+    })
+
+
+@routes_bp.route('/arac/<int:arac_id>/rota')
+def api_arac_rota(arac_id):
+    """
+    Belirli bir aracın gerçek rotası (GPS verilerinden)
+    
+    Query params:
+        tarih: Tarih (örn: 19.12.2025)
+    """
+    tarih = request.args.get('tarih')
+    
+    rota = get_arac_gercek_rota(arac_id, tarih)
+    
+    if rota is None:
+        return jsonify({'hata': f'Araç {arac_id} için veri bulunamadı'}), 404
+    
+    if 'hata' in rota:
+        return jsonify(rota), 400
+    
+    return jsonify(rota)
+
+
+@routes_bp.route('/arac/<int:arac_id>/tarihler')
+def api_arac_tarihler(arac_id):
+    """Araç için mevcut tarihleri listele"""
+    dosya = f'araclarin_durdugu_noktalar/arac_{arac_id}_duragan.csv'
+    
+    if not os.path.exists(dosya):
+        return jsonify({'hata': f'Araç {arac_id} için veri bulunamadı'}), 404
+    
+    df = pd.read_csv(dosya)
+    tarihler = df['Tarih'].unique().tolist()
+    
+    return jsonify({
+        'arac_id': arac_id,
+        'tarihler': tarihler
+    })
 
 
 @routes_bp.route('/routes')
