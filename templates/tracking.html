@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}Canlı Takip - NilüferAKS{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Mobile-First Optimization */
+@media (max-width: 991px) {
+    /* Full-screen harita mobilde */
+    .tracking-desktop-sidebar {
+        display: none !important;
+    }
+    
+    .tracking-map-container {
+        position: fixed !important;
+        top: var(--navbar-height) !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 80px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        z-index: 1 !important;
+    }
+    
+    .tracking-map-container .card {
+        height: 100% !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        border: none !important;
+    }
+    
+    .tracking-map-container #map {
+        height: 100% !important;
+    }
+    
+    /* Bottom Sheet */
+    .mobile-bottom-sheet {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background: linear-gradient(135deg, #0f1629 0%, #0a0f1a 100%) !important;
+        border-top: 2px solid var(--nilüfer-primary) !important;
+        border-radius: 20px 20px 0 0 !important;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6) !important;
+        z-index: 1000 !important;
+        transition: transform 0.3s ease !important;
+        max-height: 70vh !important;
+        overflow-y: auto !important;
+    }
+    
+    .mobile-bottom-sheet.collapsed {
+        transform: translateY(calc(100% - 80px)) !important;
+    }
+    
+    .bottom-sheet-handle {
+        width: 50px !important;
+        height: 5px !important;
+        background: rgba(255, 255, 255, 0.3) !important;
+        border-radius: 10px !important;
+        margin: 12px auto !important;
+        cursor: pointer !important;
+    }
+    
+    .bottom-sheet-content {
+        padding: 0 1rem 2rem 1rem !important;
+    }
+    
+    /* Floating Search */
+    .mobile-search-float {
+        position: fixed !important;
+        top: calc(var(--navbar-height) + 15px) !important;
+        left: 15px !important;
+        right: 15px !important;
+        z-index: 999 !important;
+    }
+    
+    .mobile-search-float .card {
+        background: rgba(15, 22, 41, 0.95) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    }
+    
+    /* Compact stats */
+    .mobile-stats-compact {
+        display: flex !important;
+        gap: 1rem !important;
+        padding: 0.75rem !important;
+    }
+    
+    .mobile-stats-compact .stat-box {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 0.5rem !important;
+        background: rgba(16, 185, 129, 0.1) !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(16, 185, 129, 0.2) !important;
+    }
+    
+    .mobile-stats-compact .stat-box h4 {
+        font-size: 1.25rem !important;
+        margin: 0 !important;
+        font-weight: 800 !important;
+    }
+    
+    .mobile-stats-compact .stat-box small {
+        font-size: 0.7rem !important;
+        opacity: 0.8 !important;
+    }
+}
+
+/* Desktop: Keep original layout */
+@media (min-width: 992px) {
+    .mobile-bottom-sheet,
+    .mobile-search-float {
+        display: none !important;
+    }
+}
+
+/* Smooth animations */
+.mobile-bottom-sheet {
+    touch-action: pan-y !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sol Kolon: Bilgiler (Desktop) -->
+    <div class="col-lg-4 tracking-desktop-sidebar">
+        <!-- Filo Durumu -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-truck me-2"></i>Filo Durumu
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h3 class="text-success mb-0" id="aktif-arac">43</h3>
+                        <small class="text-muted">Aktif</small>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="text-warning mb-0" id="bekleyen-arac">2</h3>
+                        <small class="text-muted">Beklemede</small>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="text-danger mb-0" id="depo-arac">1</h3>
+                        <small class="text-muted">Depoda</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mahalle Seçimi -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-geo me-2"></i>Mahallenizi Seçin
+            </div>
+            <div class="card-body">
+                <select class="form-select mb-3" id="mahalle-select">
+                    <option value="">Mahalle Ara...</option>
+                    <option value="gorukle">Görükle</option>
+                    <option value="ihsaniye">İhsaniye</option>
+                    <option value="konak">Konak</option>
+                    <option value="besevler">Beşevler</option>
+                    <option value="dumlupinar">Dumlupınar</option>
+                </select>
+                
+                <div id="mahalle-durum" class="d-none">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span>Görükle</span>
+                            <span class="badge bg-success">09:42 ✓</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span>İhsaniye</span>
+                            <span class="badge bg-success">10:15 ✓</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span>Konak</span>
+                            <span class="badge bg-primary">Şimdi</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span>Beşevler</span>
+                            <span class="badge bg-secondary">~14:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Günlük İstatistik -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-bar-chart me-2"></i>Günlük İstatistik
+            </div>
+            <div class="card-body">
+                <div class="mb-3 d-flex justify-content-between">
+                    <span>Toplanan</span>
+                    <span id="stat-toplanan">487 ton</span>
+                </div>
+                <div class="mb-3 d-flex justify-content-between">
+                    <span>Ziyaret</span>
+                    <span id="stat-ziyaret">52/64 mahalle</span>
+                </div>
+                <div class="mb-3 d-flex justify-content-between">
+                    <span>Kalan süre</span>
+                    <span id="stat-kalan">~3 saat</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Günlük İlerleme</span>
+                    <span id="ilerleme-yuzde">81%</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" id="ilerleme-bar" style="width: 81%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bildirim -->
+        <div class="card bg-primary bg-opacity-10 border-primary">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-lightbulb text-warning me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <strong>Mahallenize çöp toplama aracı</strong><br>
+                        <span class="text-primary">yaklaşık 14:00'te gelecek.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sağ Kolon: Harita -->
+    <div class="col-lg-8 tracking-map-container">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-geo-alt me-2"></i>Canlı Araç Takip</span>
+                <div class="d-none d-lg-block">
+                    <span class="badge bg-success"><i class="bi bi-circle-fill"></i> Hareket</span>
+                    <span class="badge bg-warning"><i class="bi bi-circle-fill"></i> Toplama</span>
+                    <span class="badge bg-danger"><i class="bi bi-circle-fill"></i> Depo</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="map" style="height: 650px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile: Floating Search -->
+<div class="mobile-search-float d-lg-none">
+    <div class="card shadow">
+        <div class="card-body p-3">
+            <div class="input-group">
+                <span class="input-group-text bg-dark border-0">
+                    <i class="bi bi-search text-success"></i>
+                </span>
+                <input type="text" class="form-control bg-dark text-light border-0" 
+                       id="mobile-mahalle-search" placeholder="Mahallenizi ara...">
+            </div>
+            <div id="mobile-search-result" class="mt-2 d-none">
+                <small class="text-success">
+                    <i class="bi bi-geo-alt-fill"></i> <span id="mobile-result-text"></span>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile: Bottom Sheet -->
+<div class="mobile-bottom-sheet collapsed d-lg-none" id="bottomSheet">
+    <div class="bottom-sheet-handle" id="sheetHandle"></div>
+    
+    <div class="bottom-sheet-content">
+        <!-- Compact Stats -->
+        <div class="mobile-stats-compact mb-3">
+            <div class="stat-box">
+                <h4 class="text-success" id="mobile-aktif">43</h4>
+                <small class="text-muted">Aktif</small>
+            </div>
+            <div class="stat-box">
+                <h4 class="text-warning" id="mobile-bekleyen">2</h4>
+                <small class="text-muted">Beklemede</small>
+            </div>
+            <div class="stat-box">
+                <h4 class="text-info" id="mobile-tamamlanan">81%</h4>
+                <small class="text-muted">Tamamlandı</small>
+            </div>
+        </div>
+        
+        <!-- Mahalle Listesi -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-list-check me-2"></i>Mahalle Durumları
+            </div>
+            <div class="card-body p-2">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
+                        <span><i class="bi bi-check-circle text-success me-2"></i>Görükle</span>
+                        <span class="badge bg-success">09:42</span>
+                    </div>
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
+                        <span><i class="bi bi-check-circle text-success me-2"></i>İhsaniye</span>
+                        <span class="badge bg-success">10:15</span>
+                    </div>
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
+                        <span><i class="bi bi-arrow-right-circle text-primary me-2"></i>Konak</span>
+                        <span class="badge bg-primary">Şimdi</span>
+                    </div>
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
+                        <span><i class="bi bi-clock text-secondary me-2"></i>Beşevler</span>
+                        <span class="badge bg-secondary">~14:00</span>
+                    </div>
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
+                        <span><i class="bi bi-clock text-secondary me-2"></i>Dumlupınar</span>
+                        <span class="badge bg-secondary">~15:30</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Günlük İlerleme -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-graph-up me-2"></i>Günlük İlerleme
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Toplanan Atık</span>
+                    <strong class="text-success">487 ton</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Ziyaret Edilen</span>
+                    <strong class="text-info">52/64 mahalle</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Kalan Süre</span>
+                    <strong class="text-warning">~3 saat</strong>
+                </div>
+                <div class="progress" style="height: 12px;">
+                    <div class="progress-bar bg-success" style="width: 81%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const map = L.map('map').setView([40.21, 28.90], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    
+    // Depo
+    L.marker([40.2063, 28.9023], {
+        icon: L.divIcon({
+            html: '<i class="bi bi-house-fill text-warning" style="font-size: 24px;"></i>',
+            iconSize: [30, 30], iconAnchor: [15, 15]
+        })
+    }).addTo(map).bindPopup('<b>DEPO</b>');
+    
+    // Araçlar
+    const araclar = [
+        {id: 2824, lat: 40.2250, lon: 28.8800, durum: 'hareket', mahalle: 'Dumlupınar'},
+        {id: 1409, lat: 40.2150, lon: 28.9100, durum: 'toplama', mahalle: 'Fethiye'},
+        {id: 7823, lat: 40.2609, lon: 28.9377, durum: 'hareket', mahalle: 'Balat'},
+        {id: 3156, lat: 40.2063, lon: 28.9023, durum: 'depo', mahalle: 'Depo'},
+    ];
+    
+    const aracMarkers = {};
+    
+    araclar.forEach(arac => {
+        const color = arac.durum === 'hareket' ? '#28a745' : arac.durum === 'toplama' ? '#ffc107' : '#dc3545';
+        const marker = L.marker([arac.lat, arac.lon], {
+            icon: L.divIcon({
+                html: `<i class="bi bi-truck-front-fill" style="font-size: 20px; color: ${color};"></i>`,
+                iconSize: [24, 24], iconAnchor: [12, 12]
+            })
+        }).addTo(map).bindPopup(`<b>Araç ${arac.id}</b><br>${arac.mahalle}`);
+        aracMarkers[arac.id] = {marker, data: arac};
+    });
+    
+    // Desktop: Mahalle seçimi
+    const mahalleSelect = document.getElementById('mahalle-select');
+    if (mahalleSelect) {
+        mahalleSelect.addEventListener('change', function() {
+            document.getElementById('mahalle-durum').classList.toggle('d-none', !this.value);
+        });
+    }
+    
+    // Mobile: Bottom Sheet Toggle
+    const bottomSheet = document.getElementById('bottomSheet');
+    const sheetHandle = document.getElementById('sheetHandle');
+    
+    if (bottomSheet && sheetHandle) {
+        sheetHandle.addEventListener('click', function() {
+            bottomSheet.classList.toggle('collapsed');
+        });
+        
+        // Touch swipe support
+        let startY = 0;
+        let currentY = 0;
+        
+        sheetHandle.addEventListener('touchstart', function(e) {
+            startY = e.touches[0].clientY;
+        });
+        
+        sheetHandle.addEventListener('touchmove', function(e) {
+            currentY = e.touches[0].clientY;
+            const diff = currentY - startY;
+            
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) {
+                    bottomSheet.classList.add('collapsed');
+                } else {
+                    bottomSheet.classList.remove('collapsed');
+                }
+                startY = currentY;
+            }
+        });
+    }
+    
+    // Mobile: Search
+    const mobileSearch = document.getElementById('mobile-mahalle-search');
+    const mobileResult = document.getElementById('mobile-search-result');
+    const mobileResultText = document.getElementById('mobile-result-text');
+    
+    if (mobileSearch) {
+        const mahalleler = {
+            'görükle': {lat: 40.2250, lon: 28.8800, durum: '09:42 tamamlandı'},
+            'ihsaniye': {lat: 40.2150, lon: 28.9100, durum: '10:15 tamamlandı'},
+            'konak': {lat: 40.2100, lon: 28.8900, durum: 'Şu an toplanıyor'},
+            'beşevler': {lat: 40.1950, lon: 28.8950, durum: '~14:00 gelecek'},
+            'dumlupınar': {lat: 40.1850, lon: 28.9150, durum: '~15:30 gelecek'}
+        };
+        
+        mobileSearch.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            
+            if (query.length > 2) {
+                const found = Object.keys(mahalleler).find(m => m.includes(query));
+                if (found) {
+                    const info = mahalleler[found];
+                    mobileResultText.textContent = `${found.charAt(0).toUpperCase() + found.slice(1)} - ${info.durum}`;
+                    mobileResult.classList.remove('d-none');
+                    map.setView([info.lat, info.lon], 14);
+                } else {
+                    mobileResult.classList.add('d-none');
+                }
+            } else {
+                mobileResult.classList.add('d-none');
+            }
+        });
+    }
+    
+    // Simüle hareket
+    setInterval(() => {
+        Object.values(aracMarkers).forEach(({marker, data}) => {
+            if (data.durum === 'hareket') {
+                data.lat += (Math.random() - 0.5) * 0.001;
+                data.lon += (Math.random() - 0.5) * 0.001;
+                marker.setLatLng([data.lat, data.lon]);
+            }
+        });
+    }, 3000);
+    
+    // Resize harita mobilde
+    function resizeMap() {
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+    }
+    
+    window.addEventListener('resize', resizeMap);
+    resizeMap();
+</script>
+{% endblock %}

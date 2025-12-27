@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Profil - NilüferAKS{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                    <h4 class="mb-0 text-white">
+                        <i class="bi bi-person-circle me-2"></i>Profil Bilgilerim
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="profile-item">
+                                <label class="text-muted mb-1">
+                                    <i class="bi bi-person me-2"></i>Ad Soyad
+                                </label>
+                                <div class="profile-value">{{ user.full_name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="profile-item">
+                                <label class="text-muted mb-1">
+                                    <i class="bi bi-at me-2"></i>Kullanıcı Adı
+                                </label>
+                                <div class="profile-value">
+                                    <code style="background: rgba(16, 185, 129, 0.1); padding: 0.4rem 0.8rem; border-radius: 6px; color: #10b981; font-size: 0.95rem;">
+                                        {{ user.username }}
+                                    </code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="profile-item">
+                                <label class="text-muted mb-1">
+                                    <i class="bi bi-shield-check me-2"></i>Rol
+                                </label>
+                                <div class="profile-value">
+                                    {% if user.role == 'yonetici' %}
+                                        <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 0.9rem; padding: 0.5rem 1rem;">Admin</span>
+                                    {% elif user.role == 'surucu' %}
+                                        <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 0.9rem; padding: 0.5rem 1rem;">Şoför</span>
+                                    {% else %}
+                                        <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 0.9rem; padding: 0.5rem 1rem;">Vatandaş</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% if user.vehicle_id %}
+                        <div class="col-md-6">
+                            <div class="profile-item">
+                                <label class="text-muted mb-1">
+                                    <i class="bi bi-truck me-2"></i>Araç
+                                </label>
+                                <div class="profile-value">
+                                    <span class="badge badge-vincli" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                                        {{ user.vehicle_id }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="alert" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px;">
+                        <i class="bi bi-info-circle me-2" style="color: #10b981;"></i>
+                        <span class="text-light" style="font-size: 0.9rem;">
+                            Şifre değişikliği ve diğer ayarlar için yöneticinizle iletişime geçin.
+                        </span>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a href="javascript:history.back()" class="btn" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; font-weight: 600; padding: 0.7rem;">
+                            <i class="bi bi-arrow-left me-2"></i>Geri Dön
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    background: linear-gradient(135deg, #0f1629 0%, #0a0f1a 100%);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.profile-item {
+    padding: 1rem;
+    background: rgba(16, 185, 129, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(16, 185, 129, 0.1);
+}
+
+.profile-item label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.profile-value {
+    color: #e9ecef;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.badge-vincli {
+    background-color: #10b981;
+    color: #000;
+    font-weight: 700;
+}
+</style>
+{% endblock %}

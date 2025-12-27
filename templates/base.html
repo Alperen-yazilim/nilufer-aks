@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="tr" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NilüferAKS{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Leaflet CSS (Harita için) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Özel stiller -->
+    <style>
+        :root {
+            --nilüfer-primary: #10b981;
+            --nilüfer-primary-hover: #34d399;
+            --nilüfer-secondary: #0099ff;
+            --nilüfer-dark: #0a0f1a;
+            --nilüfer-darker: #030712;
+            --navbar-height: 80px;
+        }
+        
+        body {
+            background-color: var(--nilüfer-darker);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Professional Navbar */
+        .navbar {
+            background: #0a0f1a !important;
+            border-bottom: 3px solid var(--nilüfer-primary);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            height: var(--navbar-height);
+            padding: 0 3rem !important;
+        }
+        
+        .navbar-brand {
+            color: var(--nilüfer-primary) !important;
+            font-weight: 800;
+            font-size: 1.75rem;
+            letter-spacing: -0.5px;
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-brand i {
+            font-size: 2rem;
+            margin-right: 0.75rem;
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .navbar-brand:hover {
+            color: var(--nilüfer-primary-hover) !important;
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+            transform: scale(1.05);
+        }
+        
+        .nav-link {
+            color: #cbd5e1 !important;
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: 0.3px;
+            padding: 0.75rem 1.5rem !important;
+            margin: 0 0.25rem;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            text-transform: uppercase;
+        }
+        
+        .nav-link i {
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+        }
+        
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: var(--nilüfer-primary);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        
+        .nav-link:hover {
+            color: var(--nilüfer-primary) !important;
+            background: rgba(16, 185, 129, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .nav-link:hover::before {
+            width: 80%;
+        }
+        
+        .nav-link.active {
+            color: #ffffff !important;
+            font-weight: 800;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.08));
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.2), inset 0 0 10px rgba(16, 185, 129, 0.05);
+        }
+        
+        .nav-link.active::before {
+            width: 100%;
+        }
+        
+        /* Dropdown Özel Stil */
+        .dropdown-item {
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-item:hover {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--nilüfer-primary) !important;
+            padding-left: 2rem !important;
+        }
+        
+        .card {
+            background: linear-gradient(135deg, #0f1629 0%, #0a0f1a 100%);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+        }
+        
+        .kpi-card {
+            transition: transform 0.2s;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--nilüfer-primary);
+        }
+        
+        .kpi-label {
+            color: #adb5bd;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        .status-aktif {
+            color: #00d4aa;
+        }
+        
+        .status-beklemede {
+            color: #ffc107;
+        }
+        
+        .status-depo {
+            color: #dc3545;
+        }
+        
+        #map {
+            height: 400px;
+            border-radius: 12px;
+        }
+        
+        .sidebar {
+            background-color: var(--nilüfer-dark);
+            min-height: calc(100vh - 56px);
+            border-right: 1px solid #2a2d35;
+        }
+        
+        .nav-pills .nav-link {
+            color: #adb5bd;
+        }
+        
+        .nav-pills .nav-link.active {
+            background-color: var(--nilüfer-primary);
+            color: #000;
+        }
+        
+        .progress {
+            height: 10px;
+            border-radius: 5px;
+        }
+        
+        .progress-bar {
+            background-color: var(--nilüfer-primary);
+        }
+        
+        .table {
+            color: #e9ecef;
+        }
+        
+        .badge-vincli { background-color: #0dcaf0; }
+        .badge-buyuk { background-color: #6f42c1; }
+        .badge-kucuk { background-color: #fd7e14; }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container-fluid" style="max-width: 100%; padding: 0 2rem;">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-recycle me-2"></i>NilüferAKS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if session.user %}
+                        {% if session.user.role == 'yonetici' %}
+                            <!-- ADMIN MENÜSÜ -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/yonetici' or request.path == '/' %}active{% endif %}" href="/yonetici">
+                                    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/admin/drivers' %}active{% endif %}" href="/admin/drivers">
+                                    <i class="bi bi-people me-1"></i>Şoför Yönetimi
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/tracking' %}active{% endif %}" href="/tracking">
+                                    <i class="bi bi-geo-alt me-1"></i>Canlı Takip
+                                </a>
+                            </li>
+                        {% elif session.user.role == 'surucu' %}
+                            <!-- ŞOFÖR MENÜSÜ -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/surucu' %}active{% endif %}" href="/surucu">
+                                    <i class="bi bi-truck me-1"></i>Rotam
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/tracking' %}active{% endif %}" href="/tracking">
+                                    <i class="bi bi-geo-alt me-1"></i>Canlı Takip
+                                </a>
+                            </li>
+                        {% else %}
+                            <!-- PUBLIC MENÜSÜ -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/tracking' %}active{% endif %}" href="/tracking">
+                                    <i class="bi bi-geo-alt me-1"></i>Canlı Takip
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <!-- MİSAFİR MENÜSÜ (Giriş yapmamış) -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/tracking' %}active{% endif %}" href="/tracking">
+                                <i class="bi bi-geo-alt me-1"></i>Canlı Takip
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+                
+                <div class="d-flex align-items-center">
+                    <span class="navbar-text me-4" style="color: #94a3b8; font-weight: 600;">
+                        <i class="bi bi-calendar3 me-2" style="color: var(--nilüfer-primary); font-size: 1.1rem;"></i>
+                        <span id="current-date" style="font-weight: 700;"></span>
+                    </span>
+                    
+                    {% if session.user %}
+                        <!-- GİRİŞ YAPMIŞ KULLANICI -->
+                        <div class="dropdown">
+                            <button class="btn btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" 
+                                    style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #ffffff; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 8px;">
+                                <i class="bi bi-person-circle me-2" style="color: var(--nilüfer-primary); font-size: 1.2rem;"></i>
+                                {{ session.user.full_name }}
+                                {% if session.user.role == 'yonetici' %}
+                                    <span class="badge ms-2" style="background: linear-gradient(135deg, #ef4444, #dc2626); font-weight: 700;">Admin</span>
+                                {% elif session.user.role == 'surucu' %}
+                                    <span class="badge ms-2" style="background: linear-gradient(135deg, #3b82f6, #2563eb); font-weight: 700;">Şoför</span>
+                                {% else %}
+                                    <span class="badge ms-2" style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 700;">Vatandaş</span>
+                                {% endif %}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" style="background: #0f1629; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 0.5rem 0;">
+                                <li>
+                                    <a class="dropdown-item" href="/profile" style="color: #cbd5e1; padding: 0.6rem 1.5rem; font-weight: 600;">
+                                        <i class="bi bi-person me-2" style="color: var(--nilüfer-primary);"></i>Profil
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider" style="border-color: rgba(16, 185, 129, 0.2);"></li>
+                                <li>
+                                    <a class="dropdown-item" href="/logout" style="color: #ef4444; padding: 0.6rem 1.5rem; font-weight: 600;">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Çıkış Yap
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <!-- MİSAFİR (Giriş yapmamış) -->
+                        <a href="/login" class="btn me-2" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 700; padding: 0.7rem 1.5rem; border: none; border-radius: 10px; font-size: 0.95rem;">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Giriş Yap
+                        </a>
+                        <a href="/register" class="btn" style="background: linear-gradient(135deg, #0099ff, #0066cc); color: white; font-weight: 700; padding: 0.7rem 1.5rem; border: none; border-radius: 10px; font-size: 0.95rem;">
+                            <i class="bi bi-person-plus me-2"></i>Kayıt Ol
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Ana İçerik -->
+    <main class="container-fluid py-4" style="margin-top: var(--navbar-height); min-height: calc(100vh - var(--navbar-height));">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-3 text-muted">
+        <small>© 2025 NilüferAKS - Nilüfer Belediyesi Hackathon Projesi</small>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Tarihi güncelle -->
+    <script>
+        document.getElementById('current-date').textContent = 
+            new Date().toLocaleDateString('tr-TR', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

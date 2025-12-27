@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Şoför Yönetimi - NilüferAKS{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="text-light">
+                <i class="bi bi-people me-2"></i>Şoför Yönetimi
+            </h3>
+            <p class="text-muted">Sürücüleri yönetin, araç atayın ve hesap bilgilerini düzenleyin</p>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row g-4">
+        <!-- Sol: Yeni Şoför Ekle -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                    <h5 class="mb-0 text-white">
+                        <i class="bi bi-person-plus me-2"></i>Yeni Şoför Ekle
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="/admin/drivers">
+                        <input type="hidden" name="action" value="add">
+                        
+                        <div class="mb-3">
+                            <label for="full_name" class="form-label text-light">
+                                <i class="bi bi-person me-2"></i>Ad Soyad
+                            </label>
+                            <input type="text" class="form-control" id="full_name" name="full_name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="vehicle_id" class="form-label text-light">
+                                <i class="bi bi-truck me-2"></i>Araç Seçin
+                            </label>
+                            <select class="form-select" id="vehicle_id" name="vehicle_id" required style="max-height: 200px; overflow-y: auto;">
+                                <option value="">Araç seçin...</option>
+                                {% for vehicle in vehicles %}
+                                    <option value="{{ vehicle.vehicle_id }}">
+                                        Vehicle {{ loop.index }} - {{ vehicle.vehicle_type }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Araç şoföre atanacaktır
+                            </small>
+                        </div>
+                        
+                        <div class="alert alert-info" style="background: rgba(0, 153, 255, 0.1); border: 1px solid rgba(0, 153, 255, 0.3);">
+                            <small>
+                                <i class="bi bi-key me-1"></i>
+                                <strong>Otomatik oluşturulacak:</strong><br>
+                                • Kullanıcı adı: ad.soyad<br>
+                                • Şifre: nilufer2025
+                            </small>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-lg" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; font-weight: 600; border: none;">
+                                <i class="bi bi-person-check me-2"></i>Şoför Ekle
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sağ: Şoför Listesi -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                    <h5 class="mb-0 text-light">
+                        <i class="bi bi-list me-2"></i>Kayıtlı Şoförler
+                        <span class="badge ms-2" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            {{ drivers|length }} Şoför
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if drivers %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="color: #cbd5e1;">
+                                            <i class="bi bi-person me-1"></i>Ad Soyad
+                                        </th>
+                                        <th style="color: #cbd5e1;">
+                                            <i class="bi bi-at me-1"></i>Kullanıcı Adı
+                                        </th>
+                                        <th style="color: #cbd5e1;">
+                                            <i class="bi bi-truck me-1"></i>Araç
+                                        </th>
+                                        <th style="color: #cbd5e1;">
+                                            <i class="bi bi-calendar me-1"></i>Son Giriş
+                                        </th>
+                                        <th style="color: #cbd5e1;" class="text-center">İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for driver in drivers %}
+                                        <tr>
+                                            <td class="text-light fw-bold">
+                                                {{ driver.full_name }}
+                                            </td>
+                                            <td class="text-muted">
+                                                <code style="background: rgba(16, 185, 129, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; color: #10b981;">
+                                                    {{ driver.username }}
+                                                </code>
+                                            </td>
+                                            <td>
+                                                {% if driver.vehicle_name %}
+                                                    <span class="badge badge-vincli" style="font-size: 0.85rem;">
+                                                        {{ driver.vehicle_id }} - {{ driver.vehicle_type[:10] }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-muted">
+                                                {% if driver.last_login %}
+                                                    {{ driver.last_login[:10] }}
+                                                {% else %}
+                                                    <span class="text-warning">Hiç giriş yapmadı</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <form method="POST" action="/admin/drivers" style="display: inline;" 
+                                                      onsubmit="return confirm('{{ driver.full_name }} şoförünü silmek istediğinizden emin misiniz?');">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="driver_id" value="{{ driver.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="bi bi-trash me-1"></i>Sil
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 4rem; color: #64748b;"></i>
+                            <p class="text-muted mt-3">Henüz kayıtlı şoför bulunmuyor.</p>
+                            <p class="text-muted">Sol taraftaki formu kullanarak yeni şoför ekleyebilirsiniz.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Bilgilendirme Kartı -->
+            <div class="card mt-4" style="background: rgba(0, 153, 255, 0.05); border: 1px solid rgba(0, 153, 255, 0.2);">
+                <div class="card-body">
+                    <h6 class="text-light mb-3">
+                        <i class="bi bi-info-circle me-2" style="color: #0099ff;"></i>
+                        Önemli Bilgiler
+                    </h6>
+                    <ul class="text-muted mb-0" style="font-size: 0.9rem;">
+                        <li class="mb-2">Yeni eklenen şoförlere <strong style="color: #10b981;">nilufer2025</strong> şifresi otomatik atanır</li>
+                        <li class="mb-2">Şoförler ilk girişte şifrelerini değiştirmelidirler</li>
+                        <li class="mb-2">Her şoföre sadece <strong>bir araç</strong> atanabilir</li>
+                        <li class="mb-2">Şoför silinirse araç serbest kalır ve başka şoföre atanabilir</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    background: linear-gradient(135deg, #0f1629 0%, #0a0f1a 100%);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+}
+
+.form-control, .form-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #ffffff;
+}
+
+.form-control:focus, .form-select:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #10b981;
+    box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.25);
+    color: #ffffff;
+}
+
+.form-select option {
+    background: #0a0f1a;
+    color: #ffffff;
+}
+
+.table {
+    color: #e9ecef;
+}
+
+.table thead th {
+    border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+    font-weight: 600;
+}
+
+.table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.table tbody tr:hover {
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.badge-vincli {
+    background-color: #0dcaf0;
+    color: #000;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Sürücü Portalı - NilüferAKS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sol Kolon: Araç ve Rota Bilgisi -->
+    <div class="col-lg-4">
+        <!-- Araç Bilgisi -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-truck text-primary" style="font-size: 2rem;"></i>
+                    <div class="ms-3">
+                        <h5 class="mb-0">Araç 2824</h5>
+                        <small class="text-muted">Mehmet Yılmaz</small>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between text-muted">
+                    <span><i class="bi bi-calendar3 me-1"></i><span id="driver-date"></span></span>
+                    <span class="badge bg-info">Vinçli</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bugünkü Rota -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-signpost me-2"></i>Bugünkü Rotam
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="route-list">
+                    <!-- JavaScript ile doldurulacak -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- İlerleme -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-bar-chart me-2"></i>İlerleme
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tamamlanan</span>
+                    <span id="progress-percent">66%</span>
+                </div>
+                <div class="progress mb-3">
+                    <div class="progress-bar" id="progress-bar" style="width: 66%"></div>
+                </div>
+                <div class="row text-center">
+                    <div class="col">
+                        <h6 class="mb-0" id="kalan-durak">3</h6>
+                        <small class="text-muted">Kalan</small>
+                    </div>
+                    <div class="col">
+                        <h6 class="mb-0" id="tahmini-bitis">14:30</h6>
+                        <small class="text-muted">Tahmini</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Günlük Özet -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clipboard-data me-2"></i>Bugünkü Özet
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h5 class="text-info mb-0" id="ozet-ton">4.2</h5>
+                        <small class="text-muted">ton</small>
+                    </div>
+                    <div class="col-4">
+                        <h5 class="text-success mb-0" id="ozet-km">34</h5>
+                        <small class="text-muted">km</small>
+                    </div>
+                    <div class="col-4">
+                        <h5 class="text-warning mb-0" id="ozet-kapasite">78%</h5>
+                        <small class="text-muted">kapasite</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sağ Kolon: Harita -->
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-map me-2"></i>Rota Haritası</span>
+                <button class="btn btn-sm btn-primary" id="btn-navigate">
+                    <i class="bi bi-navigation me-1"></i>Navigasyonu Aç
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="map" style="height: 500px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Tarih
+    document.getElementById('driver-date').textContent = 
+        new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+    
+    // Örnek rota verisi
+    const rotaVerisi = {
+        duraklar: [
+            {sira: 1, mahalle: 'Görükle', talep: 24.5, durum: 'tamamlandi', saat: '08:15', lat: 40.2230, lon: 28.8720},
+            {sira: 2, mahalle: 'İhsaniye', talep: 18.2, durum: 'tamamlandi', saat: '09:42', lat: 40.2180, lon: 28.8650},
+            {sira: 3, mahalle: 'Dumlupınar', talep: 22.1, durum: 'devam', saat: null, lat: 40.2250, lon: 28.8800},
+            {sira: 4, mahalle: 'Konak', talep: 15.8, durum: 'bekliyor', saat: '~11:30', lat: 40.2100, lon: 28.8800},
+            {sira: 5, mahalle: 'Beşevler', talep: 12.4, durum: 'bekliyor', saat: '~12:45', lat: 40.2050, lon: 28.8900},
+        ]
+    };
+    
+    // Rota listesini oluştur
+    function renderRouteList() {
+        const listEl = document.getElementById('route-list');
+        listEl.innerHTML = '';
+        
+        rotaVerisi.duraklar.forEach(durak => {
+            let icon, badgeClass, saatText;
+            
+            switch(durak.durum) {
+                case 'tamamlandi':
+                    icon = '<i class="bi bi-check-circle-fill text-success"></i>';
+                    badgeClass = 'bg-success';
+                    saatText = durak.saat + ' tamamlandı';
+                    break;
+                case 'devam':
+                    icon = '<i class="bi bi-arrow-right-circle-fill text-primary"></i>';
+                    badgeClass = 'bg-primary';
+                    saatText = 'ŞİMDİ';
+                    break;
+                default:
+                    icon = '<i class="bi bi-circle text-secondary"></i>';
+                    badgeClass = 'bg-secondary';
+                    saatText = durak.saat || '';
+            }
+            
+            const item = `
+                <div class="list-group-item d-flex justify-content-between align-items-center ${durak.durum === 'devam' ? 'bg-primary bg-opacity-10' : ''}">
+                    <div class="d-flex align-items-center">
+                        ${icon}
+                        <div class="ms-3">
+                            <h6 class="mb-0">${durak.sira}. ${durak.mahalle}</h6>
+                            <small class="text-muted">${durak.talep} ton</small>
+                        </div>
+                    </div>
+                    <small class="text-muted">${saatText}</small>
+                </div>
+            `;
+            
+            listEl.innerHTML += item;
+        });
+    }
+    
+    // Harita başlat
+    const map = L.map('map').setView([40.21, 28.88], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+    
+    // Depo
+    const depoCoord = [40.2063, 28.9023];
+    L.marker(depoCoord, {
+        icon: L.divIcon({
+            className: 'custom-div-icon',
+            html: '<i class="bi bi-house-fill text-warning" style="font-size: 20px;"></i>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        })
+    }).addTo(map).bindPopup('<b>DEPO</b>');
+    
+    // Rota noktaları ve çizgisi
+    const rotaKoordinatlari = [depoCoord];
+    
+    rotaVerisi.duraklar.forEach(durak => {
+        const coord = [durak.lat, durak.lon];
+        rotaKoordinatlari.push(coord);
+        
+        let color;
+        switch(durak.durum) {
+            case 'tamamlandi': color = '#28a745'; break;
+            case 'devam': color = '#007bff'; break;
+            default: color = '#6c757d';
+        }
+        
+        L.circleMarker(coord, {
+            radius: 10,
+            fillColor: color,
+            color: '#fff',
+            weight: 2,
+            fillOpacity: 0.9
+        }).addTo(map).bindPopup(`<b>${durak.sira}. ${durak.mahalle}</b><br>${durak.talep} ton`);
+        
+        // Numara etiketi
+        L.marker(coord, {
+            icon: L.divIcon({
+                className: 'custom-div-icon',
+                html: `<span style="color: white; font-weight: bold; font-size: 12px;">${durak.sira}</span>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            })
+        }).addTo(map);
+    });
+    
+    rotaKoordinatlari.push(depoCoord); // Depoya dönüş
+    
+    // Rota çizgisi
+    L.polyline(rotaKoordinatlari, {
+        color: '#00d4aa',
+        weight: 3,
+        opacity: 0.7,
+        dashArray: '10, 10'
+    }).addTo(map);
+    
+    // Fit bounds
+    map.fitBounds(L.latLngBounds(rotaKoordinatlari));
+    
+    // Navigasyon butonu
+    document.getElementById('btn-navigate').addEventListener('click', () => {
+        // Şu anki durak (devam durumunda olan)
+        const aktifDurak = rotaVerisi.duraklar.find(d => d.durum === 'devam');
+        if (aktifDurak) {
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${aktifDurak.lat},${aktifDurak.lon}`;
+            window.open(url, '_blank');
+        }
+    });
+    
+    // Sayfa yüklendiğinde
+    renderRouteList();
+</script>
+{% endblock %}
