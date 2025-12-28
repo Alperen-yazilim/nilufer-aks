@@ -91,12 +91,15 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-geo-alt me-2"></i>Canlı Harita</span>
-                <div class="d-flex gap-3" id="legend">
+                <div class="d-flex gap-3 align-items-center" id="legend">
                     <span class="legend-item"><span class="legend-dot" style="background:#dc3545;"></span>Araç 2824</span>
                     <span class="legend-item"><span class="legend-dot" style="background:#007bff;"></span>Araç 1520</span>
                     <span class="legend-item"><span class="legend-dot" style="background:#28a745;"></span>Araç 3615</span>
                     <span class="legend-item"><span class="legend-dot" style="background:#fd7e14;"></span>Araç 4527</span>
                     <span class="legend-item"><span class="legend-dot" style="background:#6f42c1;"></span>Araç 6574</span>
+                    <span class="vr mx-2"></span>
+                    <span class="legend-item" title="Mevcut Rota"><span class="legend-line" style="background: linear-gradient(90deg, #666 100%, transparent 0%);"></span>Mevcut</span>
+                    <span class="legend-item" title="AI Optimize Rota"><span class="legend-line-dashed"></span>AI Opt.</span>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -262,7 +265,7 @@
         <div class="card border-success">
             <div class="card-header bg-success bg-opacity-25 d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-robot me-2"></i>AI Optimizasyon Sonuçları</span>
-                <span class="badge bg-success fs-6">%20 Tasarruf</span>
+                <span class="badge bg-success fs-6" id="cmp-tasarruf-yuzde">%20 Tasarruf</span>
             </div>
             <div class="card-body">
                 <div class="row text-center">
@@ -281,7 +284,7 @@
                                     <small class="text-muted">AI</small>
                                 </div>
                             </div>
-                            <div class="text-success mt-2 fw-bold">
+                            <div class="text-success mt-2 fw-bold" id="cmp-mesafe-fark">
                                 <i class="bi bi-graph-down-arrow"></i> -37 km
                             </div>
                         </div>
@@ -302,7 +305,7 @@
                                     <small class="text-muted">AI</small>
                                 </div>
                             </div>
-                            <div class="text-success mt-2 fw-bold">
+                            <div class="text-success mt-2 fw-bold" id="cmp-yakit-fark">
                                 <i class="bi bi-fuel-pump"></i> -11 L
                             </div>
                         </div>
@@ -323,7 +326,7 @@
                                     <small class="text-muted">AI</small>
                                 </div>
                             </div>
-                            <div class="text-success mt-2 fw-bold">
+                            <div class="text-success mt-2 fw-bold" id="cmp-co2-fark">
                                 <i class="bi bi-tree"></i> -29 kg
                             </div>
                         </div>
@@ -344,7 +347,7 @@
                                     <small class="text-muted">AI</small>
                                 </div>
                             </div>
-                            <div class="text-success mt-2 fw-bold">
+                            <div class="text-success mt-2 fw-bold" id="cmp-maliyet-fark">
                                 <i class="bi bi-cash-stack"></i> -₺286
                             </div>
                         </div>
@@ -404,16 +407,44 @@
             stroke-dashoffset: -15;
         }
     }
+    .legend-line {
+        display: inline-block;
+        width: 24px;
+        height: 3px;
+        background: #888;
+        margin-right: 5px;
+        vertical-align: middle;
+        border-radius: 2px;
+    }
+    .legend-line-dashed {
+        display: inline-block;
+        width: 24px;
+        height: 3px;
+        background: repeating-linear-gradient(
+            90deg,
+            #00ff88 0px,
+            #00ff88 6px,
+            transparent 6px,
+            transparent 10px
+        );
+        margin-right: 5px;
+        vertical-align: middle;
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Harita başlat
-    const map = L.map('map').setView([40.22, 28.94], 12);
+    // Harita başlat (Canvas renderer ile performans artışı)
+    const map = L.map('map', {
+        preferCanvas: true,
+        renderer: L.canvas({ tolerance: 5 })
+    }).setView([40.22, 28.94], 12);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
+        attribution: '© OpenStreetMap',
+        updateWhenIdle: true,
+        updateWhenZooming: false
     }).addTo(map);
     
     // Araç renkleri
@@ -439,6 +470,18 @@
     let animationInterval = null;
     let speed = 5;
     
+    // Smooth hareket için son pozisyonlar
+    let lastPositions = {};
+    let lastAIPositions = {};
+    
+    // İki nokta arasında interpolasyon (smooth hareket)
+    function interpolatePosition(from, to, progress) {
+        return {
+            lat: from.lat + (to.lat - from.lat) * progress,
+            lon: from.lon + (to.lon - from.lon) * progress
+        };
+    }
+    
     // Nilüfer sınırını yükle
     async function loadNiluferSinir() {
         try {
@@ -458,8 +501,14 @@
     }
     
     // Araç verilerini yükle
+    // Demo araçları (filo izlemede gösterilen araçlar)
+    const demoAraclar = [2824, 1520, 3615, 4527, 6574];
+    
+    // Tam veri (filtresiz - karşılaştırma için)
+    const aracTamVerileri = {};
+    
     async function loadAracVerileri(tarih) {
-        const araclar = [2824, 1520, 3615, 4527, 6574];
+        const araclar = demoAraclar;
         
         for (const aracId of araclar) {
             try {
@@ -467,11 +516,16 @@
                 const data = await response.json();
                 
                 if (!data.hata) {
-                    // Saate göre sırala ve zaman bilgisi ekle
-                    aracVerileri[aracId] = data.duraklar.map(d => ({
+                    // Tam veriyi sakla (karşılaştırma için)
+                    aracTamVerileri[aracId] = data.duraklar.map(d => ({
                         ...d,
                         time: parseTime(d.saat)
-                    })).filter(d => d.time >= startTime && d.time <= endTime);
+                    }));
+                    
+                    // Animasyon için sadece çalışma saatlerini filtrele
+                    aracVerileri[aracId] = aracTamVerileri[aracId].filter(
+                        d => d.time >= startTime && d.time <= endTime
+                    );
                     
                     // Toplam durak güncelle
                     document.getElementById(`durak-${aracId}`).textContent = 
@@ -550,69 +604,195 @@
         let toplamMesafe = 0;
         let aktifArac = 0;
         
+        // Görünüm moduna göre simülasyon
+        if (currentViewMode === 'mevcut') {
+            // MEVCUT ROTA SİMÜLASYONU
+            updateMevcutSimulation();
+        } else if (currentViewMode === 'ai') {
+            // AI ROTA SİMÜLASYONU
+            updateAISimulation();
+        }
+        // KARŞILAŞTIR modunda simülasyon yapılmaz - statik rotalar gösterilir
+        
+        // Zaman ilerlet (karşılaştır modunda değil)
+        if (currentViewMode !== 'karsilastir') {
+            currentTime = new Date(currentTime.getTime() + (1000 * speed)); // Her tick'te 1 saniye * hız
+        }
+        
+        // Bitiş kontrolü
+        if (currentTime >= endTime) {
+            pauseSimulation();
+            document.getElementById('btn-play').disabled = true;
+        }
+    }
+    
+    // Mevcut rota simülasyonu
+    function updateMevcutSimulation() {
+        let toplamDurak = 0;
+        let toplamMesafe = 0;
+        let aktifArac = 0;
+        
         // Her araç için güncelle
         Object.keys(aracRenkleri).forEach(aracId => {
             const duraklar = aracVerileri[aracId] || [];
             
             // Bu zamana kadar olan durakları bul
             const gecmisDuraklar = duraklar.filter(d => d.time <= currentTime);
+            // Gelecek durağı bul (interpolasyon için)
+            const gelecekDuraklar = duraklar.filter(d => d.time > currentTime);
             
             if (gecmisDuraklar.length > 0) {
+                let pozisyon;
                 const sonDurak = gecmisDuraklar[gecmisDuraklar.length - 1];
                 
-                // Marker pozisyonunu güncelle
-                if (aracMarkers[aracId]) {
-                    aracMarkers[aracId].setLatLng([sonDurak.lat, sonDurak.lon]);
+                // Smooth interpolasyon: sonraki durak varsa aralarında hareket et
+                if (gelecekDuraklar.length > 0) {
+                    const gelecekDurak = gelecekDuraklar[0];
+                    const gecenSure = currentTime - sonDurak.time;
+                    const toplamSure = gelecekDurak.time - sonDurak.time;
+                    const progress = Math.min(1, gecenSure / toplamSure);
+                    
+                    pozisyon = interpolatePosition(sonDurak, gelecekDurak, progress);
+                } else {
+                    pozisyon = sonDurak;
                 }
                 
-                // Rota çizgisini güncelle
+                // Marker pozisyonunu güncelle (smooth)
+                if (aracMarkers[aracId]) {
+                    aracMarkers[aracId].setLatLng([pozisyon.lat, pozisyon.lon]);
+                }
+                
+                // Rota çizgisini güncelle (tamamlanan duraklar + mevcut pozisyon)
                 const rotaKoordinatlari = gecmisDuraklar.map(d => [d.lat, d.lon]);
+                rotaKoordinatlari.push([pozisyon.lat, pozisyon.lon]); // Mevcut pozisyonu ekle
                 if (aracPolylines[aracId]) {
                     aracPolylines[aracId].setLatLngs(rotaKoordinatlari);
                 }
                 
-                // İstatistikleri güncelle
-                document.getElementById(`durak-${aracId}`).textContent = 
-                    `${gecmisDuraklar.length} / ${duraklar.length}`;
-                
-                // Mesafe hesapla
-                let mesafe = 0;
-                for (let i = 1; i < gecmisDuraklar.length; i++) {
-                    mesafe += haversine(
-                        gecmisDuraklar[i-1].lat, gecmisDuraklar[i-1].lon,
-                        gecmisDuraklar[i].lat, gecmisDuraklar[i].lon
-                    );
+                // İstatistikleri güncelle (sadece mevcut modda)
+                if (currentViewMode === 'mevcut' || currentViewMode === 'karsilastir') {
+                    document.getElementById(`durak-${aracId}`).textContent = 
+                        `${gecmisDuraklar.length} / ${duraklar.length}`;
+                    
+                    // Mesafe hesapla
+                    let mesafe = 0;
+                    for (let i = 1; i < gecmisDuraklar.length; i++) {
+                        mesafe += haversine(
+                            gecmisDuraklar[i-1].lat, gecmisDuraklar[i-1].lon,
+                            gecmisDuraklar[i].lat, gecmisDuraklar[i].lon
+                        );
+                    }
+                    document.getElementById(`mesafe-${aracId}`).textContent = `${mesafe.toFixed(1)} km`;
+                    
+                    // Status güncelle
+                    const statusEl = document.getElementById(`status-${aracId}`);
+                    if (gecmisDuraklar.length < duraklar.length) {
+                        statusEl.textContent = 'Aktif';
+                        statusEl.className = 'badge bg-warning';
+                        aktifArac++;
+                    } else {
+                        statusEl.textContent = 'Tamamlandı';
+                        statusEl.className = 'badge bg-success';
+                    }
+                    
+                    toplamDurak += gecmisDuraklar.length;
+                    toplamMesafe += mesafe;
                 }
-                document.getElementById(`mesafe-${aracId}`).textContent = `${mesafe.toFixed(1)} km`;
-                
-                // Status güncelle
-                const statusEl = document.getElementById(`status-${aracId}`);
-                if (gecmisDuraklar.length < duraklar.length) {
-                    statusEl.textContent = 'Aktif';
-                    statusEl.className = 'badge bg-warning';
-                    aktifArac++;
-                } else {
-                    statusEl.textContent = 'Tamamlandı';
-                    statusEl.className = 'badge bg-success';
-                }
-                
-                toplamDurak += gecmisDuraklar.length;
-                toplamMesafe += mesafe;
             }
         });
         
-        // Genel istatistikleri güncelle
-        document.getElementById('stat-toplam-durak').textContent = toplamDurak;
-        document.getElementById('stat-toplam-mesafe').textContent = `${toplamMesafe.toFixed(1)} km`;
-        document.getElementById('stat-aktif-arac').textContent = `${aktifArac} / 5`;
+        // Genel istatistikleri güncelle (mevcut mod)
+        if (currentViewMode === 'mevcut') {
+            document.getElementById('stat-toplam-durak').textContent = toplamDurak;
+            document.getElementById('stat-toplam-mesafe').textContent = `${toplamMesafe.toFixed(1)} km`;
+            document.getElementById('stat-aktif-arac').textContent = `${aktifArac} / 5`;
+        }
+    }
+    
+    // AI rota simülasyonu
+    function updateAISimulation() {
+        let toplamDurak = 0;
+        let toplamMesafe = 0;
+        let aktifArac = 0;
         
-        // Zaman ilerlet
-        currentTime = new Date(currentTime.getTime() + (1000 * speed)); // Her tick'te 1 saniye * hız
+        // AI simülasyonu mevcut ile aynı zaman aralığını kullanıyor (07:00-14:00)
+        // currentTime doğrudan kullanılabilir
         
-        // Bitiş kontrolü
-        if (currentTime >= endTime) {
-            pauseSimulation();
-            document.getElementById('btn-play').disabled = true;
+        Object.keys(aracRenkleri).forEach(aracId => {
+            const aiDuraklar = aiSimulationData[aracId] || [];
+            
+            if (aiDuraklar.length === 0) return;
+            
+            // Bu zamana kadar olan AI duraklarını bul
+            const gecmisAIDuraklar = aiDuraklar.filter(d => d.time <= currentTime);
+            // Gelecek durağı bul (interpolasyon için)
+            const gelecekAIDuraklar = aiDuraklar.filter(d => d.time > currentTime);
+            
+            if (gecmisAIDuraklar.length > 0) {
+                let pozisyon;
+                const sonDurak = gecmisAIDuraklar[gecmisAIDuraklar.length - 1];
+                
+                // Smooth interpolasyon: sonraki durak varsa aralarında hareket et
+                if (gelecekAIDuraklar.length > 0) {
+                    const gelecekDurak = gelecekAIDuraklar[0];
+                    const gecenSure = currentTime - sonDurak.time;
+                    const toplamSure = gelecekDurak.time - sonDurak.time;
+                    const progress = Math.min(1, gecenSure / toplamSure);
+                    
+                    pozisyon = interpolatePosition(sonDurak, gelecekDurak, progress);
+                } else {
+                    pozisyon = sonDurak;
+                }
+                
+                // AI Marker pozisyonunu güncelle (smooth)
+                if (aiMarkers[aracId]) {
+                    aiMarkers[aracId].setLatLng([pozisyon.lat, pozisyon.lon]);
+                }
+                
+                // AI rota çizgisini güncelle (tamamlanan duraklar + mevcut pozisyon)
+                const rotaKoordinatlari = gecmisAIDuraklar.map(d => [d.lat, d.lon]);
+                rotaKoordinatlari.push([pozisyon.lat, pozisyon.lon]); // Mevcut pozisyonu ekle
+                if (aiPolylines[aracId]) {
+                    aiPolylines[aracId].setLatLngs(rotaKoordinatlari);
+                }
+                
+                // İstatistikleri güncelle (AI modda)
+                if (currentViewMode === 'ai') {
+                    document.getElementById(`durak-${aracId}`).textContent = 
+                        `${gecmisAIDuraklar.length} / ${aiDuraklar.length}`;
+                    
+                    // Mesafe hesapla
+                    let mesafe = 0;
+                    for (let i = 1; i < gecmisAIDuraklar.length; i++) {
+                        mesafe += haversine(
+                            gecmisAIDuraklar[i-1].lat, gecmisAIDuraklar[i-1].lon,
+                            gecmisAIDuraklar[i].lat, gecmisAIDuraklar[i].lon
+                        );
+                    }
+                    document.getElementById(`mesafe-${aracId}`).textContent = `${mesafe.toFixed(1)} km`;
+                    
+                    // Status güncelle
+                    const statusEl = document.getElementById(`status-${aracId}`);
+                    if (gecmisAIDuraklar.length < aiDuraklar.length) {
+                        statusEl.textContent = 'AI Aktif';
+                        statusEl.className = 'badge bg-info';
+                        aktifArac++;
+                    } else {
+                        statusEl.textContent = 'AI Tamamlandı';
+                        statusEl.className = 'badge bg-success';
+                    }
+                    
+                    toplamDurak += gecmisAIDuraklar.length;
+                    toplamMesafe += mesafe;
+                }
+            }
+        });
+        
+        // Genel istatistikleri güncelle (AI mod)
+        if (currentViewMode === 'ai') {
+            document.getElementById('stat-toplam-durak').textContent = toplamDurak;
+            document.getElementById('stat-toplam-mesafe').textContent = `${toplamMesafe.toFixed(1)} km`;
+            document.getElementById('stat-aktif-arac').textContent = `${aktifArac} / 5`;
         }
     }
     
@@ -671,7 +851,7 @@
         document.getElementById('current-time').textContent = '07:00:00';
         document.getElementById('btn-play').disabled = false;
         
-        // Marker'ları sıfırla
+        // Mevcut marker'ları sıfırla
         Object.keys(aracRenkleri).forEach(aracId => {
             const ilkDurak = aracVerileri[aracId]?.[0];
             if (ilkDurak && aracMarkers[aracId]) {
@@ -683,12 +863,34 @@
             
             // Status sıfırla
             const statusEl = document.getElementById(`status-${aracId}`);
-            statusEl.textContent = 'Bekliyor';
-            statusEl.className = 'badge bg-success';
+            if (currentViewMode === 'ai') {
+                statusEl.textContent = 'AI Bekliyor';
+                statusEl.className = 'badge bg-info';
+            } else {
+                statusEl.textContent = 'Bekliyor';
+                statusEl.className = 'badge bg-success';
+            }
             
-            document.getElementById(`durak-${aracId}`).textContent = 
-                `0 / ${aracVerileri[aracId]?.length || 0}`;
+            // Durak sayısını güncelle (moda göre)
+            if (currentViewMode === 'ai') {
+                document.getElementById(`durak-${aracId}`).textContent = 
+                    `0 / ${aiSimulationData[aracId]?.length || 0}`;
+            } else {
+                document.getElementById(`durak-${aracId}`).textContent = 
+                    `0 / ${aracVerileri[aracId]?.length || 0}`;
+            }
             document.getElementById(`mesafe-${aracId}`).textContent = '0 km';
+        });
+        
+        // AI marker'ları sıfırla
+        Object.keys(aiMarkers).forEach(aracId => {
+            const ilkDurak = aiSimulationData[aracId]?.[0];
+            if (ilkDurak && aiMarkers[aracId]) {
+                aiMarkers[aracId].setLatLng([ilkDurak.lat, ilkDurak.lon]);
+            }
+            if (aiPolylines[aracId]) {
+                aiPolylines[aracId].setLatLngs([]);
+            }
         });
         
         // Genel istatistikleri sıfırla
@@ -720,6 +922,8 @@
     let aiOptimized = false;
     let aiRotaVerileri = {};
     let aiPolylines = {};
+    let aiMarkers = {};  // AI araç marker'ları
+    let aiSimulationData = {};  // AI simülasyon verileri (zaman bazlı)
     let currentViewMode = 'mevcut';
     
     // AI Optimize butonu
@@ -732,47 +936,147 @@
         
         const btn = this;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Hesaplanıyor...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Yükleniyor...';
         
-        // Simüle edilmiş gecikme (ML modeli çalışıyormuş gibi)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Mock AI rotaları oluştur (gerçek rotaların optimize edilmiş versiyonu)
-        generateMockAIRoutes();
-        
-        // Karşılaştırma değerlerini hesapla
-        calculateComparison();
-        
-        // Paneli göster
-        showAIResults();
-        
-        // Radio butonları aktifleştir
-        document.getElementById('view-ai').disabled = false;
-        document.getElementById('view-karsilastir').disabled = false;
-        
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Optimize Edildi';
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn-success');
-        
-        aiOptimized = true;
+        try {
+            // Gerçek AI optimize edilmiş rotaları API'den çek
+            const response = await fetch('/api/ai-optimized-routes');
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Rotalar yüklenemedi');
+            }
+            
+            // AI rotalarını işle ve dönüştür
+            loadAIRoutesFromAPI(result.data);
+            
+            // Karşılaştırma değerlerini hesapla
+            calculateComparison();
+            
+            // Paneli göster
+            showAIResults();
+            
+            // Radio butonları aktifleştir
+            document.getElementById('view-ai').disabled = false;
+            document.getElementById('view-karsilastir').disabled = false;
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Optimize Edildi';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
+            
+            aiOptimized = true;
+            
+        } catch (error) {
+            console.error('AI rotaları yüklenirken hata:', error);
+            alert('AI rotaları yüklenirken bir hata oluştu: ' + error.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-magic me-1"></i>AI ile Optimize Et';
+        }
     });
     
-    // Mock AI rotaları oluştur
-    function generateMockAIRoutes() {
-        // AI rotaları = Mevcut rotaların optimize edilmiş hali
-        // Gerçekte ML modeli burada çalışacak
-        Object.keys(aracVerileri).forEach(aracId => {
-            const mevcutDuraklar = aracVerileri[aracId] || [];
+    // API'den gelen AI rotalarını yükle
+    function loadAIRoutesFromAPI(apiData) {
+        // routes_api.json formatındaki veriyi işle
+        if (!apiData || !apiData.vehicles) {
+            console.error('Geçersiz API verisi:', apiData);
+            return;
+        }
+        
+        // Sadece demo araçlarının rotalarını yükle
+        apiData.vehicles.forEach(vehicle => {
+            const vehicleId = vehicle.vehicle_id.toString();
             
-            // Mock: Bazı gereksiz durakları çıkar, rotayı kısalt
-            // Gerçek optimizasyonda TSP/VRP algoritması kullanılacak
-            const optimizeDuraklar = mevcutDuraklar.filter((d, i) => {
-                // Her 5. duraktan 1'ini atla (simüle optimizasyon)
-                return i % 5 !== 0 || i === 0;
+            // Sadece demo araçlarını işle
+            if (!demoAraclar.includes(parseInt(vehicleId))) {
+                return;
+            }
+            
+            const route = vehicle.route || [];
+            
+            // Performans için: Her 3. noktayı al (yine de tüm rotayı gösterir)
+            const simplifiedRoute = route.length > 100 
+                ? route.filter((point, idx) => idx % 3 === 0 || idx === route.length - 1)
+                : route;
+            
+            // API formatını Leaflet formatına çevir
+            const duraklar = simplifiedRoute.map((point, idx) => ({
+                lat: point.lat,
+                lon: point.lon,
+                mahalle: point.mahalle,
+                saat: point.arrival_time ? point.arrival_time.split('T')[1].substring(0, 8) : null,
+                demand_ton: point.demand_ton,
+                load_ton: point.load_ton,
+                step: point.step,
+                hour: point.hour
+            }));
+            
+            aiRotaVerileri[vehicleId] = duraklar;
+            
+            // AI simülasyon verilerini hazırla (zaman bazlı)
+            // 07:00 - 14:00 arası = 7 saat = 420 dakika
+            // Her araç için rotayı bu süreye yay
+            const totalDurationMinutes = 420; // 7 saat
+            const minutesPerStop = duraklar.length > 0 ? totalDurationMinutes / duraklar.length : 1;
+            
+            aiSimulationData[vehicleId] = duraklar.map((d, idx) => {
+                // Her durak için tahmini zaman hesapla
+                // AI rotası 07:00'da başlar (mevcut ile senkron)
+                const baseTime = new Date('2025-12-19T07:00:00');
+                const stopTime = new Date(baseTime.getTime() + (idx * minutesPerStop * 60 * 1000));
+                
+                return {
+                    ...d,
+                    time: stopTime
+                };
+            });
+        });
+        
+        console.log(`${Object.keys(aiRotaVerileri).length} demo araç rotası yüklendi (${demoAraclar.join(', ')})`);
+        
+        // AI marker'larını oluştur
+        initAIMarkers();
+    }
+    
+    // AI marker'larını başlat
+    function initAIMarkers() {
+        Object.keys(aracRenkleri).forEach(aracId => {
+            const renk = aracRenkleri[aracId];
+            const aiDuraklar = aiSimulationData[aracId];
+            
+            if (!aiDuraklar || aiDuraklar.length === 0) return;
+            
+            // AI araç marker'ı (robot ikonu ile ayırt edilir)
+            const aiTruckIcon = L.divIcon({
+                className: 'ai-truck-marker',
+                html: `<div style="
+                    background: ${renk};
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 50%;
+                    border: 3px solid #00ff88;
+                    box-shadow: 0 2px 8px rgba(0,255,136,0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                "><i class="bi bi-robot" style="color: white; font-size: 14px;"></i></div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
             });
             
-            aiRotaVerileri[aracId] = optimizeDuraklar;
+            // İlk konum
+            const ilkDurak = aiDuraklar[0];
+            aiMarkers[aracId] = L.marker([ilkDurak.lat, ilkDurak.lon], {
+                icon: aiTruckIcon
+            }).bindPopup(`AI Araç ${aracId}`);
+            
+            // AI rota çizgisi (kesikli)
+            aiPolylines[aracId] = L.polyline([], {
+                color: renk,
+                weight: 4,
+                opacity: 0.9,
+                dashArray: '10, 5'
+            });
         });
     }
     
@@ -780,29 +1084,50 @@
     function calculateComparison() {
         let toplamMevcutMesafe = 0;
         let toplamAIMesafe = 0;
+        let mevcutDurakSayisi = 0;
+        let aiDurakSayisi = 0;
         
-        Object.keys(aracVerileri).forEach(aracId => {
-            const mevcutDuraklar = aracVerileri[aracId] || [];
-            const aiDuraklar = aiRotaVerileri[aracId] || [];
+        console.log('=== KARŞILAŞTIRMA HESAPLANIYOR ===');
+        console.log('Mevcut araçlar:', Object.keys(aracTamVerileri));
+        console.log('AI araçlar:', Object.keys(aiRotaVerileri));
+        
+        // Karşılaştırma için TAM VERİYİ kullan (filtresiz)
+        Object.keys(aracTamVerileri).forEach(aracId => {
+            const mevcutDuraklar = aracTamVerileri[aracId] || [];
+            mevcutDurakSayisi += mevcutDuraklar.length;
             
             // Mevcut mesafe
+            let aracMesafe = 0;
             for (let i = 1; i < mevcutDuraklar.length; i++) {
-                toplamMevcutMesafe += haversine(
+                aracMesafe += haversine(
                     mevcutDuraklar[i-1].lat, mevcutDuraklar[i-1].lon,
                     mevcutDuraklar[i].lat, mevcutDuraklar[i].lon
                 );
             }
+            toplamMevcutMesafe += aracMesafe;
+            console.log(`Mevcut Araç ${aracId}: ${mevcutDuraklar.length} durak, ${aracMesafe.toFixed(1)} km`);
+        });
+        
+        Object.keys(aiRotaVerileri).forEach(aracId => {
+            const aiDuraklar = aiRotaVerileri[aracId] || [];
+            aiDurakSayisi += aiDuraklar.length;
             
             // AI mesafe
+            let aracMesafe = 0;
             for (let i = 1; i < aiDuraklar.length; i++) {
-                toplamAIMesafe += haversine(
+                aracMesafe += haversine(
                     aiDuraklar[i-1].lat, aiDuraklar[i-1].lon,
                     aiDuraklar[i].lat, aiDuraklar[i].lon
                 );
             }
+            toplamAIMesafe += aracMesafe;
+            console.log(`AI Araç ${aracId}: ${aiDuraklar.length} durak, ${aracMesafe.toFixed(1)} km`);
         });
         
         // Değerleri güncelle
+        console.log(`\nTOPLAM Mevcut: ${toplamMevcutMesafe.toFixed(1)} km`);
+        console.log(`TOPLAM AI: ${toplamAIMesafe.toFixed(1)} km`);
+        
         const mesafeFarki = toplamMevcutMesafe - toplamAIMesafe;
         const yakitMevcut = toplamMevcutMesafe * 0.3; // 0.3 L/km
         const yakitAI = toplamAIMesafe * 0.3;
@@ -810,6 +1135,8 @@
         const co2AI = yakitAI * 2.65;
         const maliyetMevcut = yakitMevcut * 26; // ₺26/L
         const maliyetAI = yakitAI * 26;
+        
+        console.log(`Mesafe Farkı: ${mesafeFarki.toFixed(1)} km (${((mesafeFarki/toplamMevcutMesafe)*100).toFixed(1)}%)`);
         
         // UI güncelle
         document.getElementById('cmp-mesafe-mevcut').textContent = `${toplamMevcutMesafe.toFixed(0)} km`;
@@ -823,6 +1150,26 @@
         
         document.getElementById('cmp-maliyet-mevcut').textContent = `₺${maliyetMevcut.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
         document.getElementById('cmp-maliyet-ai').textContent = `₺${maliyetAI.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+        
+        // Tasarruf yüzdelerini hesapla ve göster
+        const mesafeTasarruf = ((mesafeFarki / toplamMevcutMesafe) * 100).toFixed(1);
+        const yakitTasarruf = ((yakitMevcut - yakitAI) / yakitMevcut * 100).toFixed(1);
+        const co2Tasarruf = ((co2Mevcut - co2AI) / co2Mevcut * 100).toFixed(1);
+        const maliyetTasarruf = maliyetMevcut - maliyetAI;
+        
+        // Fark değerlerini güncelle
+        document.getElementById('cmp-tasarruf-yuzde').textContent = `%${mesafeTasarruf} Tasarruf`;
+        document.getElementById('cmp-mesafe-fark').innerHTML = `<i class="bi bi-graph-down-arrow"></i> ${mesafeFarki.toFixed(0)} km`;
+        document.getElementById('cmp-yakit-fark').innerHTML = `<i class="bi bi-fuel-pump"></i> ${(yakitMevcut - yakitAI).toFixed(0)} L`;
+        document.getElementById('cmp-co2-fark').innerHTML = `<i class="bi bi-tree"></i> ${(co2Mevcut - co2AI).toFixed(0)} kg`;
+        document.getElementById('cmp-maliyet-fark').innerHTML = `<i class="bi bi-cash-stack"></i> ₺${maliyetTasarruf.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+        
+        console.log(`AI Optimizasyon Sonuçları:
+            Mesafe Tasarrufu: ${mesafeFarki.toFixed(1)} km (${mesafeTasarruf}%)
+            Yakıt Tasarrufu: ${(yakitMevcut - yakitAI).toFixed(1)} L (${yakitTasarruf}%)
+            CO2 Azalması: ${(co2Mevcut - co2AI).toFixed(1)} kg (${co2Tasarruf}%)
+            Maliyet Tasarrufu: ₺${maliyetTasarruf.toFixed(0)}
+            Mevcut Durak: ${mevcutDurakSayisi}, AI Durak: ${aiDurakSayisi}`);
     }
     
     // AI sonuçlarını göster
@@ -846,14 +1193,39 @@
         document.getElementById('view-ai').disabled = true;
         document.getElementById('view-karsilastir').disabled = true;
         document.getElementById('view-mevcut').checked = true;
+        currentViewMode = 'mevcut';
+        
+        // AI marker'ları temizle
+        Object.keys(aiMarkers).forEach(aracId => {
+            if (aiMarkers[aracId] && map.hasLayer(aiMarkers[aracId])) {
+                aiMarkers[aracId].remove();
+            }
+        });
+        aiMarkers = {};
         
         // AI rotalarını temizle
         Object.keys(aiPolylines).forEach(aracId => {
-            if (aiPolylines[aracId]) {
+            if (aiPolylines[aracId] && map.hasLayer(aiPolylines[aracId])) {
                 aiPolylines[aracId].remove();
             }
         });
         aiPolylines = {};
+        
+        // AI simülasyon verilerini temizle
+        aiSimulationData = {};
+        aiRotaVerileri = {};
+        
+        // Mevcut marker ve polyline'ları tekrar göster
+        Object.keys(aracMarkers).forEach(aracId => {
+            if (aracMarkers[aracId] && !map.hasLayer(aracMarkers[aracId])) {
+                aracMarkers[aracId].addTo(map);
+            }
+        });
+        Object.keys(aracPolylines).forEach(aracId => {
+            if (aracPolylines[aracId] && !map.hasLayer(aracPolylines[aracId])) {
+                aracPolylines[aracId].addTo(map);
+            }
+        });
     }
     
     // Görünüm değişikliği
@@ -865,55 +1237,266 @@
     });
     
     function updateViewMode() {
-        // Mevcut rotaları göster/gizle
-        Object.keys(aracPolylines).forEach(aracId => {
-            if (aracPolylines[aracId]) {
-                if (currentViewMode === 'ai') {
-                    aracPolylines[aracId].setStyle({ opacity: 0.2 });
-                } else {
-                    aracPolylines[aracId].setStyle({ opacity: 0.8 });
-                }
-            }
-        });
+        console.log('Görünüm modu değişti:', currentViewMode);
         
-        // AI rotalarını göster/gizle
-        if (currentViewMode === 'ai' || currentViewMode === 'karsilastir') {
-            drawAIRoutes();
-        } else {
-            // AI rotalarını gizle
+        // Simülasyonu sıfırla ve yeniden başlat için hazırla
+        resetSimulation();
+        
+        if (currentViewMode === 'mevcut') {
+            // MEVCUT MOD: Sadece mevcut rotalar ve marker'lar
+            // Mevcut marker'ları göster
+            Object.keys(aracMarkers).forEach(aracId => {
+                if (aracMarkers[aracId] && !map.hasLayer(aracMarkers[aracId])) {
+                    aracMarkers[aracId].addTo(map);
+                }
+            });
+            // Mevcut polyline'ları göster (orijinal renklerle)
+            Object.keys(aracPolylines).forEach(aracId => {
+                if (aracPolylines[aracId]) {
+                    if (!map.hasLayer(aracPolylines[aracId])) {
+                        aracPolylines[aracId].addTo(map);
+                    }
+                    // Mevcut modda orijinal renkler
+                    aracPolylines[aracId].setStyle({ 
+                        color: aracRenkleri[aracId],
+                        weight: 3,
+                        opacity: 0.8,
+                        dashArray: null
+                    });
+                    aracPolylines[aracId].setLatLngs([]);
+                }
+            });
+            // AI marker ve polyline'ları gizle
+            Object.keys(aiMarkers).forEach(aracId => {
+                if (aiMarkers[aracId] && map.hasLayer(aiMarkers[aracId])) {
+                    aiMarkers[aracId].remove();
+                }
+            });
             Object.keys(aiPolylines).forEach(aracId => {
-                if (aiPolylines[aracId]) {
+                if (aiPolylines[aracId] && map.hasLayer(aiPolylines[aracId])) {
                     aiPolylines[aracId].remove();
                 }
             });
-            aiPolylines = {};
+            // Karşılaştırma marker'larını temizle
+            clearComparisonMarkers();
+            
+        } else if (currentViewMode === 'ai') {
+            // AI MOD: Sadece AI rotalar ve marker'lar
+            // Mevcut marker ve polyline'ları gizle
+            Object.keys(aracMarkers).forEach(aracId => {
+                if (aracMarkers[aracId] && map.hasLayer(aracMarkers[aracId])) {
+                    aracMarkers[aracId].remove();
+                }
+            });
+            Object.keys(aracPolylines).forEach(aracId => {
+                if (aracPolylines[aracId] && map.hasLayer(aracPolylines[aracId])) {
+                    aracPolylines[aracId].remove();
+                }
+            });
+            // AI marker'ları göster
+            Object.keys(aiMarkers).forEach(aracId => {
+                if (aiMarkers[aracId] && !map.hasLayer(aiMarkers[aracId])) {
+                    aiMarkers[aracId].addTo(map);
+                }
+            });
+            // AI polyline'ları göster (orijinal araç renkleriyle)
+            Object.keys(aiPolylines).forEach(aracId => {
+                if (aiPolylines[aracId]) {
+                    if (!map.hasLayer(aiPolylines[aracId])) {
+                        aiPolylines[aracId].addTo(map);
+                    }
+                    // AI modda orijinal renkler kesikli çizgiyle
+                    aiPolylines[aracId].setStyle({
+                        color: aracRenkleri[aracId],
+                        weight: 4,
+                        opacity: 0.9,
+                        dashArray: '10, 5'
+                    });
+                    aiPolylines[aracId].setLatLngs([]);
+                }
+            });
+            // Karşılaştırma marker'larını temizle
+            clearComparisonMarkers();
+            
+        } else if (currentViewMode === 'karsilastir') {
+            // KARŞILAŞTIRMA MODU: STATİK ROTALAR - Simülasyon yok, tüm rotalar anında çizilir
+            
+            // Mevcut marker'ları gizle (karşılaştırmada sadece başlangıç noktaları göster)
+            Object.keys(aracMarkers).forEach(aracId => {
+                if (aracMarkers[aracId] && map.hasLayer(aracMarkers[aracId])) {
+                    aracMarkers[aracId].remove();
+                }
+            });
+            
+            // AI marker'ları da gizle
+            Object.keys(aiMarkers).forEach(aracId => {
+                if (aiMarkers[aracId] && map.hasLayer(aiMarkers[aracId])) {
+                    aiMarkers[aracId].remove();
+                }
+            });
+            
+            // MEVCUT ROTALARI ÇİZ (TAM ROTA - Soluk, düz çizgi)
+            Object.keys(aracPolylines).forEach(aracId => {
+                if (aracPolylines[aracId]) {
+                    if (!map.hasLayer(aracPolylines[aracId])) {
+                        aracPolylines[aracId].addTo(map);
+                    }
+                    // Mevcut tam rota
+                    const mevcutDuraklar = aracTamVerileri[aracId] || [];
+                    const mevcutCoords = mevcutDuraklar.map(d => [d.lat, d.lon]);
+                    aracPolylines[aracId].setLatLngs(mevcutCoords);
+                    aracPolylines[aracId].setStyle({ 
+                        color: aracRenkleri[aracId],
+                        weight: 6,
+                        opacity: 0.4,
+                        dashArray: null
+                    });
+                }
+            });
+            
+            // AI ROTALARI ÇİZ (TAM ROTA - Parlak, kesikli çizgi)
+            Object.keys(aiPolylines).forEach(aracId => {
+                if (aiPolylines[aracId]) {
+                    if (!map.hasLayer(aiPolylines[aracId])) {
+                        aiPolylines[aracId].addTo(map);
+                    }
+                    // AI tam rota
+                    const aiDuraklar = aiRotaVerileri[aracId] || [];
+                    const aiCoords = aiDuraklar.map(d => [d.lat, d.lon]);
+                    aiPolylines[aracId].setLatLngs(aiCoords);
+                    aiPolylines[aracId].setStyle({
+                        color: aracRenkleri[aracId],
+                        weight: 4,
+                        opacity: 1,
+                        dashArray: '15, 8'
+                    });
+                }
+            });
+            
+            // Başlangıç noktaları için özel marker'lar ekle
+            drawComparisonStartMarkers();
+            
+            // Karşılaştırma istatistiklerini güncelle
+            updateComparisonStats();
         }
     }
     
-    // AI rotalarını çiz
-    function drawAIRoutes() {
-        // AI renkleri (yeşil tonları)
-        const aiRenkleri = {
-            2824: '#20c997',
-            1520: '#198754',
-            3615: '#0d6efd',
-            4527: '#0dcaf0',
-            6574: '#6610f2'
-        };
+    // Karşılaştırma modunda başlangıç marker'ları
+    let comparisonMarkers = [];
+    
+    function drawComparisonStartMarkers() {
+        // Önce eskilerini temizle
+        comparisonMarkers.forEach(m => m.remove());
+        comparisonMarkers = [];
         
+        Object.keys(aracRenkleri).forEach(aracId => {
+            const mevcutDuraklar = aracTamVerileri[aracId] || [];
+            const aiDuraklar = aiRotaVerileri[aracId] || [];
+            
+            // Mevcut rota başlangıç noktası (kare ikon)
+            if (mevcutDuraklar.length > 0) {
+                const baslangic = mevcutDuraklar[0];
+                const startIcon = L.divIcon({
+                    className: 'start-marker',
+                    html: `<div style="
+                        background: ${aracRenkleri[aracId]};
+                        width: 16px;
+                        height: 16px;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    "><i class="bi bi-geo-alt-fill" style="color: white; font-size: 8px;"></i></div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+                const marker = L.marker([baslangic.lat, baslangic.lon], { icon: startIcon })
+                    .bindPopup(`<b>Araç ${aracId}</b><br>Mevcut Başlangıç`)
+                    .addTo(map);
+                comparisonMarkers.push(marker);
+            }
+            
+            // AI rota başlangıç noktası (yuvarlak ikon)
+            if (aiDuraklar.length > 0) {
+                const aiBaslangic = aiDuraklar[0];
+                const aiStartIcon = L.divIcon({
+                    className: 'ai-start-marker',
+                    html: `<div style="
+                        background: ${aracRenkleri[aracId]};
+                        width: 16px;
+                        height: 16px;
+                        border-radius: 50%;
+                        border: 3px solid #00ff88;
+                        box-shadow: 0 2px 6px rgba(0,255,136,0.5);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    "><i class="bi bi-robot" style="color: white; font-size: 8px;"></i></div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+                const aiMarker = L.marker([aiBaslangic.lat, aiBaslangic.lon], { icon: aiStartIcon })
+                    .bindPopup(`<b>Araç ${aracId}</b><br>AI Başlangıç`)
+                    .addTo(map);
+                comparisonMarkers.push(aiMarker);
+            }
+        });
+    }
+    
+    function clearComparisonMarkers() {
+        comparisonMarkers.forEach(m => m.remove());
+        comparisonMarkers = [];
+    }
+    
+    // Karşılaştırma istatistiklerini güncelle
+    function updateComparisonStats() {
+        let toplamMevcutDurak = 0;
+        let toplamAIDurak = 0;
+        let toplamMevcutMesafe = 0;
+        let toplamAIMesafe = 0;
+        
+        Object.keys(aracRenkleri).forEach(aracId => {
+            const mevcutDuraklar = aracTamVerileri[aracId] || [];
+            const aiDuraklar = aiRotaVerileri[aracId] || [];
+            
+            toplamMevcutDurak += mevcutDuraklar.length;
+            toplamAIDurak += aiDuraklar.length;
+            
+            // Mevcut mesafe
+            for (let i = 1; i < mevcutDuraklar.length; i++) {
+                toplamMevcutMesafe += haversine(
+                    mevcutDuraklar[i-1].lat, mevcutDuraklar[i-1].lon,
+                    mevcutDuraklar[i].lat, mevcutDuraklar[i].lon
+                );
+            }
+            
+            // AI mesafe
+            for (let i = 1; i < aiDuraklar.length; i++) {
+                toplamAIMesafe += haversine(
+                    aiDuraklar[i-1].lat, aiDuraklar[i-1].lon,
+                    aiDuraklar[i].lat, aiDuraklar[i].lon
+                );
+            }
+        });
+        
+        // Alt istatistik panelini güncelle
+        document.getElementById('stat-toplam-durak').innerHTML = 
+            `<span class="text-danger">${toplamMevcutDurak}</span> / <span class="text-success">${toplamAIDurak}</span>`;
+        document.getElementById('stat-toplam-mesafe').innerHTML = 
+            `<span class="text-danger">${toplamMevcutMesafe.toFixed(1)}</span> / <span class="text-success">${toplamAIMesafe.toFixed(1)} km</span>`;
+        document.getElementById('stat-aktif-arac').textContent = `5 / 5`;
+        document.getElementById('stat-gecen-sure').textContent = 'Statik Görünüm';
+    }
+    
+    // AI rotalarını çiz (statik - tam rota gösterimi için)
+    function drawAIRoutesStatic() {
         Object.keys(aiRotaVerileri).forEach(aracId => {
             const duraklar = aiRotaVerileri[aracId] || [];
             
-            if (duraklar.length > 0 && !aiPolylines[aracId]) {
+            if (duraklar.length > 0 && aiPolylines[aracId]) {
                 const coords = duraklar.map(d => [d.lat, d.lon]);
-                
-                aiPolylines[aracId] = L.polyline(coords, {
-                    color: aiRenkleri[aracId],
-                    weight: 4,
-                    opacity: 0.9,
-                    dashArray: '10, 5',
-                    className: 'ai-route'
-                }).addTo(map);
+                aiPolylines[aracId].setLatLngs(coords);
             }
         });
     }

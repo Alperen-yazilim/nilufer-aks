@@ -1,0 +1,26 @@
+# Nilüfer Belediyesi - Veri Analizi & ML Modelleri
+# Gerekli Python Kütüphaneleri
+
+# Core Data Science
+pandas>=1.5.0
+numpy>=1.23.0
+
+# Machine Learning
+xgboost>=2.0.0
+scikit-learn>=1.3.0
+
+# Visualization
+matplotlib>=3.8.0
+seaborn>=0.12.0
+
+# Spatial Analysis
+scipy>=1.10.0
+
+# Utilities
+tqdm>=4.65.0
+openpyxl>=3.1.0
+
+# Jupyter (opsiyonel - notebook'lar için)
+jupyter>=1.0.0
+ipykernel>=6.25.0
+nbformat>=5.9.0
