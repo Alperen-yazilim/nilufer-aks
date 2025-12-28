@@ -141,8 +141,8 @@ Bu proje, Nilüfer Belediyesi'nin **gerçek operasyonel verileri** üzerine inş
 
 ```bash
 # 1. Repoyu klonla
-git clone https://github.com/guldasahmet/hackathon.git
-cd hackathon
+git clone https://github.com/Alperen-yazilim/nilufer-aks.git
+cd nilufer-aks
 
 # 2. Sanal ortam oluştur
 python -m venv venv
@@ -156,7 +156,7 @@ source venv/bin/activate
 # 3. Bağımlılıkları yükle
 pip install -r requirements.txt
 
-# 4. İlk kurulumu yap (veritabanı + mock veriler)
+# 4. İlk kurulumu yap (veritabanı + demo kullanıcılar)
 python setup.py
 
 # 5. Uygulamayı başlat
