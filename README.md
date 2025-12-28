@@ -53,6 +53,26 @@ Bu proje, Nilüfer Belediyesi'nin **gerçek operasyonel verileri** üzerine inş
 
 ---
 
+## 📈 Veri Analizi Görselleri
+
+### Konteyner Kaynak Dağılımı
+![Konteyner Kaynak Dağılımı](assets/images/03_konteyner_kaynak_dagilimi.png)
+*GPS verileri ve ML tahminleri ile tespit edilen 30.518 konteyner*
+
+### Konteyner Tip Dağılımı
+![Tip Dağılımı](assets/images/05_tip_dagilimi_pie_chart.png)
+*Yeraltı, 770L, 400L ve Plastik konteyner dağılımı*
+
+### Gerçek Rota Haritası
+![Gerçek Yol Rotası](assets/images/20_gercek_yol_rota_waypoints.png)
+*Araçların gerçek GPS verilerine dayalı rota haritası*
+
+### Rota Detay Analizi
+![Rota Detay](assets/images/21_rota_detay_waypoints.png)
+*Waypoint bazlı detaylı rota görselleştirmesi*
+
+---
+
 ## ✨ Özellikler
 
 ### 🎛️ Yönetici Paneli (Dashboard)
