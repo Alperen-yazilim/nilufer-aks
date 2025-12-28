@@ -294,7 +294,7 @@ maliyet = yakıt_litre × ₺26/L
 
 **Etkinlik:** Bursa Nilüfer Belediyesi Hackathon 2025  
 **Proje:** NilüferAKS - Akıllı Atık Kontrol Sistemi  
-**Takım:** NilüferAKS
+**Takım:** Poyraz
 
 ---
 
