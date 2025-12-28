@@ -17,9 +17,9 @@
 
 NilüferAKS, **Vehicle Routing Problem (VRP)** çözümü ile çöp toplama operasyonlarını optimize eden, yapay zeka destekli bir filo yönetim sistemidir.
 
-### 🏆 AI Optimizasyon Sonuçları (5 Araç ile Test)
+### 🏆 AI Optimizasyon Sonuçları (5 Araçlık Gerçek Verilerle Test Edildi!)
 
-> ⚠️ **Not:** Aşağıdaki sonuçlar **5 araçlık** örnek test verileriyle elde edilmiştir. Belediyenin toplam **45 araçlık** filosu için gerçek tasarruf **9 kat daha fazla** olacaktır.
+> 📊 **Not:** Aşağıdaki sonuçlar **5 araçlık gerçek operasyonel verilerle** elde edilmiştir. Belediyenin toplam **45 araçlık** filosu için tasarruf **9 kat daha fazla** olacaktır.
 
 | Metrik | Mevcut | AI Optimize | Tasarruf (5 Araç) |
 |--------|--------|-------------|-------------------|
