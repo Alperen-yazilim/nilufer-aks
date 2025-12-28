@@ -17,19 +17,24 @@
 
 NilüferAKS, **Vehicle Routing Problem (VRP)** çözümü ile çöp toplama operasyonlarını optimize eden, yapay zeka destekli bir filo yönetim sistemidir.
 
-### 🏆 AI Optimizasyon Sonuçları (Gerçek Verilerle Test Edilmiş)
+### 🏆 AI Optimizasyon Sonuçları (5 Araç ile Test)
 
-| Metrik | Mevcut | AI Optimize | Tasarruf |
-|--------|--------|-------------|----------|
+> ⚠️ **Not:** Aşağıdaki sonuçlar **5 araçlık** örnek test verileriyle elde edilmiştir. Belediyenin toplam **45 araçlık** filosu için gerçek tasarruf **9 kat daha fazla** olacaktır.
+
+| Metrik | Mevcut | AI Optimize | Tasarruf (5 Araç) |
+|--------|--------|-------------|-------------------|
 | 🚗 **Mesafe** | 378 km | 153 km | **%59.6** |
 | ⛽ **Yakıt** | 113 L | 46 L | **68 L/gün** |
 | 🌍 **CO2 Emisyonu** | 300 kg | 121 kg | **179 kg/gün** |
 | 💰 **Günlük Maliyet** | ₺2,945 | ₺1,190 | **₺1,755/gün** |
 
-### 📅 Yıllık Projeksiyon
-- **💰 Yıllık Tasarruf:** ~₺526,500
-- **🌍 CO2 Azaltımı:** ~53.7 ton/yıl
-- **🛣️ Mesafe Azaltımı:** ~67,500 km/yıl
+### 📅 Yıllık Projeksiyon (45 Araç - Tam Filo)
+
+| Metrik | 5 Araç (Test) | 45 Araç (Tam Filo) |
+|--------|---------------|---------------------|
+| 💰 **Yıllık Tasarruf** | ~₺526,500 | **~₺4,738,500** |
+| 🌍 **CO2 Azaltımı** | ~53.7 ton/yıl | **~483 ton/yıl** |
+| 🛣️ **Mesafe Azaltımı** | ~67,500 km/yıl | **~607,500 km/yıl** |
 
 ---
 
